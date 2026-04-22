@@ -1,0 +1,170 @@
+:root {
+    --pfe-green: #9ed92d;
+    --pfe-radius: 8px;
+    --pfe-shadow: 0 4px 24px rgba(0,0,0,.18);
+}
+
+/* Overlay */
+.pfe-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity .2s ease;
+}
+
+.pfe-overlay.pfe-visible {
+    opacity: 1;
+}
+
+/* Card */
+.pfe-card {
+    background: #fff;
+    border-radius: var(--pfe-radius);
+    box-shadow: var(--pfe-shadow);
+    max-width: 480px;
+    width: calc(100% - 2rem);
+    padding: 2rem;
+    position: relative;
+    transform: translateY(12px);
+    transition: transform .2s ease;
+}
+
+.pfe-overlay.pfe-visible .pfe-card {
+    transform: translateY(0);
+}
+
+.pfe-close-btn {
+    position: absolute;
+    top: .75rem;
+    right: .75rem;
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    line-height: 1;
+    color: #555;
+}
+
+.pfe-close-btn:hover { color: #000; }
+
+.pfe-card h2 {
+    margin: 0 0 .25rem;
+    font-size: 1.25rem;
+}
+
+.pfe-card p.pfe-subtitle {
+    margin: 0 0 1rem;
+    color: #555;
+    font-size: .9rem;
+}
+
+/* Fields */
+.pfe-field-wrap {
+    margin-bottom: .85rem;
+}
+
+.pfe-field-wrap label {
+    display: block;
+    font-size: .85rem;
+    font-weight: 600;
+    margin-bottom: .25rem;
+}
+
+.pfe-input {
+    width: 100%;
+    padding: .55rem .75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: .95rem;
+    box-sizing: border-box;
+}
+
+.pfe-input:focus {
+    border-color: var(--pfe-green);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(158,217,45,.25);
+}
+
+.pfe-required { color: #c00; margin-left: .2em; }
+
+/* Newsletter consent */
+.pfe-newsletter-consent {
+    font-size: .85rem;
+}
+
+.pfe-newsletter-consent label {
+    font-weight: normal;
+    display: flex;
+    align-items: flex-start;
+    gap: .4rem;
+}
+
+/* Submit */
+.pfe-submit-btn {
+    width: 100%;
+    padding: .7rem 1rem;
+    background: var(--pfe-green);
+    color: #fff;
+    border: none;
+    border-radius: var(--pfe-radius);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: .5rem;
+    transition: filter .15s;
+}
+
+.pfe-submit-btn:hover { filter: brightness(1.08); }
+.pfe-submit-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Messages */
+.pfe-msg {
+    margin-top: .75rem;
+    padding: .65rem .9rem;
+    border-radius: 4px;
+    font-size: .9rem;
+}
+
+.pfe-msg-success { background: #eafbe7; color: #1a7a2e; }
+.pfe-msg-error   { background: #fdecea; color: #b00020; }
+
+/* Loading state */
+.pfe-loading { text-align: center; padding: 1.5rem; color: #888; }
+
+/* Body scroll lock applied by JS when a dialog is open */
+body.pfe-scroll-locked { overflow: hidden; }
+
+/* Card body — content wrapper inside the card */
+.pfe-card-body { width: 100%; }
+
+/* Card max-height + scroll for tall forms */
+.pfe-card {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Aria-live message area; invisible until a message is set */
+.pfe-msg-area:empty { display: none; }
+
+/* Callback ("Llámame") block */
+.pfe-callback-block { border-top: 1px solid #e5e5e5; padding-top: .75rem; }
+
+.pfe-callback-label {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-weight: 600;
+    font-size: .9rem;
+    cursor: pointer;
+}
+
+.pfe-callback-fields {
+    margin-top: .6rem;
+    padding-left: 1.4rem;
+    border-left: 3px solid var(--pfe-green);
+}

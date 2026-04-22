@@ -1,0 +1,35 @@
+# Dependencies
+/vendor/
+node_modules/
+
+# Build output
+/dist/
+/build/
+assets/js/*.min.js
+assets/css/*.min.css
+admin/assets/*.min.js
+admin/assets/*.min.css
+
+# Environment
+.env
+*.local
+*.local.php
+
+# IDEs
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temp / debug
+*.log
+*.bak
+*.swp
+*.sess
+
+# Releases (si generas zips para distribuir)
+*.zip
+*.tar

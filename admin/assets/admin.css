@@ -1,0 +1,204 @@
+:root {
+    --pfe-green: #9ed92d;
+    --pfe-radius: 6px;
+    --pfe-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+
+.pfe-wrap h1 {
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+}
+
+/* ── Outer form-block card ──────────────────────────────────────────────── */
+.pfe-form-block {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: var(--pfe-radius);
+    box-shadow: var(--pfe-shadow);
+    margin-bottom: 1.5rem;
+    padding: .6rem .75rem;
+}
+
+/* ── Section cards inside edit view ────────────────────────────────────── */
+.pfe-section {
+    border: 1px solid #dcdcde;
+    border-radius: var(--pfe-radius);
+    margin-bottom: .5rem;
+    overflow: hidden;
+}
+
+.pfe-section:last-child {
+    margin-bottom: 0;
+}
+
+.pfe-section-hd {
+    background: #f6f7f7;
+    border-bottom: 1px solid #dcdcde;
+    padding: .55rem .85rem;
+}
+
+/* No border when header is the only content (details hidden) */
+.pfe-section-hd:last-child {
+    border-bottom: none;
+}
+
+.pfe-section-bd {
+    padding: .6rem .85rem .75rem;
+}
+
+.pfe-section-title {
+    font-size: .8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #50575e;
+}
+
+/* Toggle label used as section header for newsletter / callback */
+.pfe-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: .9rem;
+    color: #23282d;
+    user-select: none;
+}
+
+.pfe-toggle-label input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.pfe-section-desc {
+    margin: .2rem 0 0 1.4rem;
+    color: #777;
+    font-size: .8rem;
+    line-height: 1.4;
+}
+
+/* ── Compact form-table inside sections ─────────────────────────────────── */
+.pfe-compact-table {
+    margin: 0;
+}
+
+.pfe-compact-table th {
+    padding: .45rem .75rem .45rem 0;
+    width: 155px;
+    font-size: .85rem;
+    font-weight: 600;
+    vertical-align: top;
+    padding-top: .6rem;
+    white-space: nowrap;
+}
+
+.pfe-compact-table td {
+    padding: .45rem 0;
+}
+
+.pfe-compact-table input.regular-text,
+.pfe-compact-table input.large-text,
+.pfe-compact-table textarea.large-text,
+.pfe-compact-table select {
+    max-width: 380px;
+    width: 100%;
+}
+
+.pfe-compact-table textarea {
+    resize: vertical;
+}
+
+/* ── Field rows ─────────────────────────────────────────────────────────── */
+.pfe-field-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-bottom: .4rem;
+    padding: .45rem .6rem;
+    background: #f9f9f9;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+}
+
+.pfe-field-row select,
+.pfe-field-row input[type="text"] {
+    flex: 1;
+    min-width: 90px;
+}
+
+.pfe-required-label {
+    white-space: nowrap;
+    font-size: .85rem;
+}
+
+/* ── Log table ──────────────────────────────────────────────────────────── */
+.pfe-logs-table td,
+.pfe-logs-table th {
+    font-size: .85rem;
+}
+
+.pfe-status-ok    { color: #2a9d2a; font-weight: 600; }
+.pfe-status-error { color: #c00;    font-weight: 600; }
+.pfe-status-honeypot,
+.pfe-status-invalid { color: #e65c00; font-weight: 600; }
+
+.pfe-log-count {
+    font-size: .85rem;
+    font-weight: normal;
+    color: #666;
+}
+
+/* ── Forms index table ──────────────────────────────────────────────────── */
+.pfe-add-form-btn {
+    margin-top: .75rem;
+}
+
+.pfe-forms-index-table {
+    margin-bottom: .75rem;
+}
+
+.pfe-forms-index-table td,
+.pfe-forms-index-table th {
+    vertical-align: middle;
+}
+
+.pfe-form-row-actions {
+    white-space: nowrap;
+}
+
+.pfe-no-forms-placeholder {
+    color: #777;
+    font-style: italic;
+    margin-bottom: .75rem;
+}
+
+/* ── Edit view chrome ───────────────────────────────────────────────────── */
+.pfe-edit-breadcrumb {
+    margin-bottom: 1rem;
+}
+
+.pfe-back-btn {
+    font-size: .9rem;
+    text-decoration: none !important;
+}
+
+.pfe-back-btn:hover {
+    color: #000;
+}
+
+.pfe-edit-actions {
+    display: flex;
+    gap: .5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+/* Lock styling for readonly email name field */
+[data-pfe-ff="name"][readonly] {
+    background: #f0f0f0;
+    cursor: not-allowed;
+    color: #555;
+}
