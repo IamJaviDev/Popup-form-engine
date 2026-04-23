@@ -218,6 +218,48 @@ $forms = $this->settings->getForms();
             </div>
         </div>
 
+        <!-- ── Bloque 5: Estilos ─────────────────────────────────────────── -->
+        <div class="pfe-section pfe-styles-section">
+            <div class="pfe-section-hd">
+                <label class="pfe-toggle-label">
+                    <input type="checkbox" data-pfe-field="styles_enabled" value="1">
+                    <span><?php esc_html_e('Estilos', 'popup-form-engine'); ?></span>
+                </label>
+                <p class="pfe-section-desc"><?php esc_html_e('CSS aplicado únicamente dentro del popup de este formulario.', 'popup-form-engine'); ?></p>
+            </div>
+            <div class="pfe-styles-details pfe-section-bd" style="display:none">
+                <table class="form-table pfe-compact-table" role="presentation">
+                    <tr>
+                        <th><?php esc_html_e('Color primario (botón, bordes)', 'popup-form-engine'); ?></th>
+                        <td><input type="color" data-pfe-field="style_primary_color" value="#007a3d"></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color texto del botón', 'popup-form-engine'); ?></th>
+                        <td><input type="color" data-pfe-field="style_button_text_color" value="#ffffff"></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color fondo de la tarjeta', 'popup-form-engine'); ?></th>
+                        <td><input type="color" data-pfe-field="style_card_bg_color" value="#ffffff"></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Opacidad del fondo (0.3–0.9)', 'popup-form-engine'); ?></th>
+                        <td>
+                            <input type="range" data-pfe-field="style_overlay_opacity" min="0.3" max="0.9" step="0.05" style="vertical-align:middle">
+                            <output class="pfe-opacity-output" style="margin-left:.5rem;font-variant-numeric:tabular-nums">0.6</output>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('CSS personalizado', 'popup-form-engine'); ?></th>
+                        <td>
+                            <textarea data-pfe-field="style_custom_css" rows="6" class="large-text code"
+                                      placeholder=".pfe-submit-btn { border-radius: 0; }"></textarea>
+                            <p class="description"><?php esc_html_e('Los selectores se prefijarán automáticamente al scope del popup. No incluir etiquetas HTML.', 'popup-form-engine'); ?></p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
     </div><!-- /.pfe-form-block -->
 </template>
 
@@ -367,6 +409,76 @@ $forms = $this->settings->getForms();
                         <th><?php esc_html_e('Pre-marcado', 'popup-form-engine'); ?></th>
                         <td><label><input type="checkbox" data-pfe-pdf-field="nl_prechecked" value="1">
                             <?php esc_html_e('Marcado por defecto', 'popup-form-engine'); ?></label></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Llámame -->
+        <div class="pfe-section pfe-callback-section">
+            <div class="pfe-section-hd">
+                <label class="pfe-toggle-label">
+                    <input type="checkbox" data-pfe-pdf-field="callback_enabled" value="1">
+                    <span><?php esc_html_e('Llámame', 'popup-form-engine'); ?></span>
+                </label>
+                <p class="pfe-section-desc"><?php esc_html_e('Añade un checkbox para que el usuario solicite una llamada y elija día y hora preferidos.', 'popup-form-engine'); ?></p>
+            </div>
+            <div class="pfe-pdf-callback-details pfe-section-bd" style="display:none">
+                <table class="form-table pfe-compact-table" role="presentation">
+                    <tr>
+                        <th><?php esc_html_e('Etiqueta del checkbox', 'popup-form-engine'); ?></th>
+                        <td><input type="text" data-pfe-pdf-field="callback_label" class="large-text"
+                                   placeholder="<?php esc_attr_e('Quiero que me llaméis', 'popup-form-engine'); ?>"></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Destinatarios (uno por línea)', 'popup-form-engine'); ?></th>
+                        <td>
+                            <textarea data-pfe-pdf-field="callback_email_recipients" rows="3" class="large-text"
+                                      placeholder="correo@ejemplo.com"></textarea>
+                            <p class="description"><?php esc_html_e('Cuando el usuario solicita llamada, se envía un email a estos destinatarios.', 'popup-form-engine'); ?></p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Estilos -->
+        <div class="pfe-section pfe-styles-section">
+            <div class="pfe-section-hd">
+                <label class="pfe-toggle-label">
+                    <input type="checkbox" data-pfe-pdf-field="styles_enabled" value="1">
+                    <span><?php esc_html_e('Estilos', 'popup-form-engine'); ?></span>
+                </label>
+                <p class="pfe-section-desc"><?php esc_html_e('CSS aplicado únicamente dentro del popup de este formulario.', 'popup-form-engine'); ?></p>
+            </div>
+            <div class="pfe-pdf-styles-details pfe-section-bd" style="display:none">
+                <table class="form-table pfe-compact-table" role="presentation">
+                    <tr>
+                        <th><?php esc_html_e('Color primario (botón, bordes)', 'popup-form-engine'); ?></th>
+                        <td><input type="color" data-pfe-pdf-field="style_primary_color" value="#007a3d"></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color texto del botón', 'popup-form-engine'); ?></th>
+                        <td><input type="color" data-pfe-pdf-field="style_button_text_color" value="#ffffff"></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color fondo de la tarjeta', 'popup-form-engine'); ?></th>
+                        <td><input type="color" data-pfe-pdf-field="style_card_bg_color" value="#ffffff"></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Opacidad del fondo (0.3–0.9)', 'popup-form-engine'); ?></th>
+                        <td>
+                            <input type="range" data-pfe-pdf-field="style_overlay_opacity" min="0.3" max="0.9" step="0.05" style="vertical-align:middle">
+                            <output class="pfe-opacity-output" style="margin-left:.5rem;font-variant-numeric:tabular-nums">0.6</output>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('CSS personalizado', 'popup-form-engine'); ?></th>
+                        <td>
+                            <textarea data-pfe-pdf-field="style_custom_css" rows="6" class="large-text code"
+                                      placeholder=".pfe-submit-btn { border-radius: 0; }"></textarea>
+                            <p class="description"><?php esc_html_e('Los selectores se prefijarán automáticamente al scope del popup. No incluir etiquetas HTML.', 'popup-form-engine'); ?></p>
+                        </td>
                     </tr>
                 </table>
             </div>

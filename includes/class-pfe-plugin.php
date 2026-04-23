@@ -66,5 +66,18 @@ final class Plugin {
         wp_localize_script('pfe-popup-front', 'pfeData', [
             'restUrl' => esc_url_raw(rest_url('popup-form-engine/v1/')),
         ]);
+
+        $customCss = '';
+        foreach ($this->settings->getForms() as $form) {
+            $slug = sanitize_key($form['slug'] ?? '');
+            if ($slug !== '') $customCss .= StyleBuilder::buildFormCss($slug, $form);
+        }
+        foreach ($this->settings->getPdfForms() as $form) {
+            $slug = sanitize_key($form['slug'] ?? '');
+            if ($slug !== '') $customCss .= StyleBuilder::buildFormCss($slug, $form);
+        }
+        if ($customCss !== '') {
+            wp_add_inline_style('pfe-popup-front', $customCss);
+        }
     }
 }

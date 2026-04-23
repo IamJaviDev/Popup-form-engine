@@ -106,6 +106,32 @@
         setField(block, 'callback_label',                   form.callback_label                  || '');
         setField(block, 'callback_email_recipients',        form.callback_email_recipients       || '');
 
+        // Styles
+        setFieldChecked(block, 'styles_enabled', !!form.styles_enabled);
+        setField(block, 'style_primary_color',     form.style_primary_color     || '#007a3d');
+        setField(block, 'style_button_text_color', form.style_button_text_color || '#ffffff');
+        setField(block, 'style_card_bg_color',     form.style_card_bg_color     || '#ffffff');
+        setField(block, 'style_overlay_opacity',   form.style_overlay_opacity   != null ? String(form.style_overlay_opacity) : '');
+        setField(block, 'style_custom_css',        form.style_custom_css        || '');
+
+        // Styles toggle
+        (function () {
+            var stCb = block.querySelector('[data-pfe-field="styles_enabled"]');
+            var stDt = block.querySelector('.pfe-styles-details');
+            if (!stCb || !stDt) return;
+            stDt.style.display = stCb.checked ? '' : 'none';
+            stCb.addEventListener('change', function () { stDt.style.display = this.checked ? '' : 'none'; });
+        }());
+
+        // Opacity range: live output update
+        (function () {
+            var opRange  = block.querySelector('[data-pfe-field="style_overlay_opacity"]');
+            var opOutput = block.querySelector('.pfe-opacity-output');
+            if (!opRange || !opOutput) return;
+            opOutput.textContent = opRange.value;
+            opRange.addEventListener('input', function () { opOutput.textContent = this.value; });
+        }());
+
         // Newsletter section: show/hide details based on enabled state
         (function () {
             var nlCb = block.querySelector('[data-pfe-field="nl_enabled"]');
@@ -201,6 +227,12 @@
             callback_enabled:           getFieldChecked(block, 'callback_enabled'),
             callback_label:             getField(block, 'callback_label'),
             callback_email_recipients:  getField(block, 'callback_email_recipients'),
+            styles_enabled:             getFieldChecked(block, 'styles_enabled'),
+            style_primary_color:        getField(block, 'style_primary_color'),
+            style_button_text_color:    getField(block, 'style_button_text_color'),
+            style_card_bg_color:        getField(block, 'style_card_bg_color'),
+            style_overlay_opacity:      getField(block, 'style_overlay_opacity'),
+            style_custom_css:           getField(block, 'style_custom_css'),
             fields,
         };
     }
@@ -509,6 +541,46 @@
             nlCb.addEventListener('change', function () { nlDt.style.display = this.checked ? '' : 'none'; });
         }());
 
+        // Callback ("Llámame")
+        setPdfFieldChecked(block, 'callback_enabled',         !!form.callback_enabled);
+        setPdfField(block, 'callback_label',                  form.callback_label                || '');
+        setPdfField(block, 'callback_email_recipients',       form.callback_email_recipients     || '');
+
+        // Callback toggle
+        (function () {
+            var cbCb = block.querySelector('[data-pfe-pdf-field="callback_enabled"]');
+            var cbDt = block.querySelector('.pfe-pdf-callback-details');
+            if (!cbCb || !cbDt) return;
+            cbDt.style.display = cbCb.checked ? '' : 'none';
+            cbCb.addEventListener('change', function () { cbDt.style.display = this.checked ? '' : 'none'; });
+        }());
+
+        // Styles
+        setPdfFieldChecked(block, 'styles_enabled', !!form.styles_enabled);
+        setPdfField(block, 'style_primary_color',     form.style_primary_color     || '#007a3d');
+        setPdfField(block, 'style_button_text_color', form.style_button_text_color || '#ffffff');
+        setPdfField(block, 'style_card_bg_color',     form.style_card_bg_color     || '#ffffff');
+        setPdfField(block, 'style_overlay_opacity',   form.style_overlay_opacity   != null ? String(form.style_overlay_opacity) : '');
+        setPdfField(block, 'style_custom_css',        form.style_custom_css        || '');
+
+        // Styles toggle
+        (function () {
+            var stCb = block.querySelector('[data-pfe-pdf-field="styles_enabled"]');
+            var stDt = block.querySelector('.pfe-pdf-styles-details');
+            if (!stCb || !stDt) return;
+            stDt.style.display = stCb.checked ? '' : 'none';
+            stCb.addEventListener('change', function () { stDt.style.display = this.checked ? '' : 'none'; });
+        }());
+
+        // Opacity range: live output update
+        (function () {
+            var opRange  = block.querySelector('[data-pfe-pdf-field="style_overlay_opacity"]');
+            var opOutput = block.querySelector('.pfe-opacity-output');
+            if (!opRange || !opOutput) return;
+            opOutput.textContent = opRange.value;
+            opRange.addEventListener('input', function () { opOutput.textContent = this.value; });
+        }());
+
         // Fields list
         const fieldsList = block.querySelector('.pfe-pdf-fields-list');
         if (fieldsList && Array.isArray(form.fields)) {
@@ -570,12 +642,21 @@
         });
 
         return {
-            slug:                   getPdfField(block, 'slug'),
-            title:                  getPdfField(block, 'title'),
-            success_message:        getPdfField(block, 'success_msg'),
-            newsletter_enabled:     getPdfFieldChecked(block, 'nl_enabled'),
-            newsletter_label:       getPdfField(block, 'nl_label'),
-            newsletter_pre_checked: getPdfFieldChecked(block, 'nl_prechecked'),
+            slug:                       getPdfField(block, 'slug'),
+            title:                      getPdfField(block, 'title'),
+            success_message:            getPdfField(block, 'success_msg'),
+            newsletter_enabled:         getPdfFieldChecked(block, 'nl_enabled'),
+            newsletter_label:           getPdfField(block, 'nl_label'),
+            newsletter_pre_checked:     getPdfFieldChecked(block, 'nl_prechecked'),
+            callback_enabled:           getPdfFieldChecked(block, 'callback_enabled'),
+            callback_label:             getPdfField(block, 'callback_label'),
+            callback_email_recipients:  getPdfField(block, 'callback_email_recipients'),
+            styles_enabled:             getPdfFieldChecked(block, 'styles_enabled'),
+            style_primary_color:        getPdfField(block, 'style_primary_color'),
+            style_button_text_color:    getPdfField(block, 'style_button_text_color'),
+            style_card_bg_color:        getPdfField(block, 'style_card_bg_color'),
+            style_overlay_opacity:      getPdfField(block, 'style_overlay_opacity'),
+            style_custom_css:           getPdfField(block, 'style_custom_css'),
             fields,
         };
     }

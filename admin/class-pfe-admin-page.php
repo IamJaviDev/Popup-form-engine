@@ -25,6 +25,54 @@ class PFE_AdminPage {
                 ]);
                 break;
             case 'forms':
+                // ── PDF forms ──────────────────────────────────────────────────────────────
+                $pdfJsonRaw = isset($_POST['pfe_pdf_forms_json']) ? wp_unslash($_POST['pfe_pdf_forms_json']) : '';
+                if ($pdfJsonRaw !== '') {
+                    $pdfDecoded = json_decode($pdfJsonRaw, true);
+                    if (is_array($pdfDecoded)) {
+                        $pdfForms = [];
+                        foreach ($pdfDecoded as $pf) {
+                            if (!is_array($pf)) continue;
+                            $pdfSlug = sanitize_key($pf['slug'] ?? '');
+                            if ($pdfSlug === '') continue;
+                            $pdfFields = [];
+                            foreach ((array) ($pf['fields'] ?? []) as $field) {
+                                if (!is_array($field)) continue;
+                                $fName = sanitize_key($field['name'] ?? '');
+                                if ($fName === '') $fName = sanitize_key($field['label'] ?? '');
+                                if ($fName === '') continue;
+                                $pdfFields[] = [
+                                    'type'             => sanitize_key($field['type'] ?? 'text'),
+                                    'name'             => $fName,
+                                    'label'            => sanitize_text_field($field['label'] ?? ''),
+                                    'placeholder'      => sanitize_text_field($field['placeholder'] ?? ''),
+                                    'required'         => !empty($field['required']),
+                                    'is_primary_email' => !empty($field['is_primary_email']),
+                                ];
+                            }
+                            $pdfForms[] = [
+                                'slug'                      => $pdfSlug,
+                                'title'                     => sanitize_text_field($pf['title'] ?? ''),
+                                'success_message'           => sanitize_textarea_field($pf['success_message'] ?? ''),
+                                'newsletter_enabled'        => !empty($pf['newsletter_enabled']),
+                                'newsletter_label'          => wp_kses_post($pf['newsletter_label'] ?? ''),
+                                'newsletter_pre_checked'    => !empty($pf['newsletter_pre_checked']),
+                                'callback_enabled'          => !empty($pf['callback_enabled']),
+                                'callback_label'            => sanitize_text_field($pf['callback_label'] ?? ''),
+                                'callback_email_recipients' => sanitize_textarea_field($pf['callback_email_recipients'] ?? ''),
+                                'styles_enabled'            => !empty($pf['styles_enabled']),
+                                'style_primary_color'       => sanitize_hex_color($pf['style_primary_color'] ?? '') ?? '',
+                                'style_button_text_color'   => sanitize_hex_color($pf['style_button_text_color'] ?? '') ?? '',
+                                'style_card_bg_color'       => sanitize_hex_color($pf['style_card_bg_color'] ?? '') ?? '',
+                                'style_overlay_opacity'     => $this->sanitizeOpacity((string) ($pf['style_overlay_opacity'] ?? '')),
+                                'style_custom_css'          => (string) ($pf['style_custom_css'] ?? ''),
+                                'fields'                    => $pdfFields,
+                            ];
+                        }
+                        $this->settings->savePdfForms($pdfForms);
+                    }
+                }
+
                 $jsonRaw = isset($_POST['pfe_forms_json']) ? wp_unslash($_POST['pfe_forms_json']) : '';
                 if ($jsonRaw === '') break;
                 $decoded = json_decode($jsonRaw, true);
@@ -96,48 +144,15 @@ class PFE_AdminPage {
                         'callback_enabled'           => !empty($f['callback_enabled']),
                         'callback_label'             => sanitize_text_field($f['callback_label'] ?? ''),
                         'callback_email_recipients'  => sanitize_textarea_field($f['callback_email_recipients'] ?? ''),
+                        'styles_enabled'             => !empty($f['styles_enabled']),
+                        'style_primary_color'        => sanitize_hex_color($f['style_primary_color'] ?? '') ?? '',
+                        'style_button_text_color'    => sanitize_hex_color($f['style_button_text_color'] ?? '') ?? '',
+                        'style_card_bg_color'        => sanitize_hex_color($f['style_card_bg_color'] ?? '') ?? '',
+                        'style_overlay_opacity'      => $this->sanitizeOpacity((string) ($f['style_overlay_opacity'] ?? '')),
+                        'style_custom_css'           => (string) ($f['style_custom_css'] ?? ''),
                     ];
                 }
                 $this->settings->saveForms($forms);
-
-                // ── PDF forms ──────────────────────────────────────────────────────────────
-                $pdfJsonRaw = isset($_POST['pfe_pdf_forms_json']) ? wp_unslash($_POST['pfe_pdf_forms_json']) : '';
-                if ($pdfJsonRaw !== '') {
-                    $pdfDecoded = json_decode($pdfJsonRaw, true);
-                    if (is_array($pdfDecoded)) {
-                        $pdfForms = [];
-                        foreach ($pdfDecoded as $pf) {
-                            if (!is_array($pf)) continue;
-                            $pdfSlug = sanitize_key($pf['slug'] ?? '');
-                            if ($pdfSlug === '') continue;
-                            $pdfFields = [];
-                            foreach ((array) ($pf['fields'] ?? []) as $field) {
-                                if (!is_array($field)) continue;
-                                $fName = sanitize_key($field['name'] ?? '');
-                                if ($fName === '') $fName = sanitize_key($field['label'] ?? '');
-                                if ($fName === '') continue;
-                                $pdfFields[] = [
-                                    'type'             => sanitize_key($field['type'] ?? 'text'),
-                                    'name'             => $fName,
-                                    'label'            => sanitize_text_field($field['label'] ?? ''),
-                                    'placeholder'      => sanitize_text_field($field['placeholder'] ?? ''),
-                                    'required'         => !empty($field['required']),
-                                    'is_primary_email' => !empty($field['is_primary_email']),
-                                ];
-                            }
-                            $pdfForms[] = [
-                                'slug'                  => $pdfSlug,
-                                'title'                 => sanitize_text_field($pf['title'] ?? ''),
-                                'success_message'       => sanitize_textarea_field($pf['success_message'] ?? ''),
-                                'newsletter_enabled'    => !empty($pf['newsletter_enabled']),
-                                'newsletter_label'      => wp_kses_post($pf['newsletter_label'] ?? ''),
-                                'newsletter_pre_checked'=> !empty($pf['newsletter_pre_checked']),
-                                'fields'                => $pdfFields,
-                            ];
-                        }
-                        $this->settings->savePdfForms($pdfForms);
-                    }
-                }
                 break;
             case 'newsletter':
                 $this->settings->saveNewsletter([
@@ -241,5 +256,12 @@ class PFE_AdminPage {
             'logs'          => __('Logs', 'popup-form-engine'),
             default         => ucfirst($tab),
         };
+    }
+
+    private function sanitizeOpacity(string $val): string {
+        if ($val === '') return '';
+        $f = (float) $val;
+        if ($f < 0.0 || $f > 1.0) return '';
+        return number_format($f, 2);
     }
 }

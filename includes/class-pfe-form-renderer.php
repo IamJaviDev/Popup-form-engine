@@ -115,14 +115,12 @@ class FormRenderer {
                     '<div class="pfe-field-wrap">' .
                         '<label for="pfe-cb-day">' . esc_html__('Día preferido', 'popup-form-engine') .
                         ' <span class="pfe-required" aria-hidden="true">*</span></label>' .
-                        '<input type="text" id="pfe-cb-day" name="pfe_callback_day" class="pfe-input"' .
-                        ' placeholder="' . esc_attr__('Ej: Lunes o 15 de marzo', 'popup-form-engine') . '">' .
+                        '<select id="pfe-cb-day" name="pfe_callback_day" class="pfe-callback-day-select pfe-input"></select>' .
                     '</div>' .
                     '<div class="pfe-field-wrap">' .
                         '<label for="pfe-cb-time">' . esc_html__('Hora preferida', 'popup-form-engine') .
                         ' <span class="pfe-required" aria-hidden="true">*</span></label>' .
-                        '<input type="text" id="pfe-cb-time" name="pfe_callback_time" class="pfe-input"' .
-                        ' placeholder="' . esc_attr__('Ej: 10:00 - 12:00', 'popup-form-engine') . '">' .
+                        '<select id="pfe-cb-time" name="pfe_callback_time" class="pfe-callback-time-select pfe-input"></select>' .
                     '</div>' .
                 '</div>' .
             '</div>';

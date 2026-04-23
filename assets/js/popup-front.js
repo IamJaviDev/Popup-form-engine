@@ -27,7 +27,7 @@
      *                                      focus back when the dialog closes.
      * @returns {{ overlay, card, body, msgArea }}
      */
-    function openDialog(returnFocusEl) {
+    function openDialog(returnFocusEl, formSlug) {
         const dlgId = 'pfe-dlg-' + (++dialogCounter);
 
         const overlay = document.createElement('div');
@@ -35,6 +35,7 @@
         overlay.className = 'pfe-overlay';
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
+        overlay.dataset.pfeForm = formSlug || '';
         // aria-labelledby is set by setDialogTitle() once a heading is injected.
 
         const card = document.createElement('div');
@@ -179,6 +180,52 @@
         if (tsEl) tsEl.value = Math.floor(Date.now() / 1000);
     }
 
+    function populateCallbackSelects(form) {
+        const daySelect  = form.querySelector('.pfe-callback-day-select');
+        const timeSelect = form.querySelector('.pfe-callback-time-select');
+        if (!daySelect || !timeSelect) return;
+
+        const MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const DAYS   = ['Domingo','Lunes','Martes','Mi\xe9rcoles','Jueves','Viernes','S\xe1bado'];
+        const SLOTS_WEEKDAY  = ['09:00-11:00','11:00-13:00','16:00-18:00','18:00-20:00'];
+        const SLOTS_SATURDAY = ['09:00-11:00','11:00-13:00'];
+
+        daySelect.innerHTML = '<option value="" disabled selected>Selecciona un d\xeda</option>';
+        const dates = [];
+        let d = new Date();
+        d.setHours(0, 0, 0, 0);
+        while (dates.length < 6) {
+            d = new Date(d.getTime() + 86400000);
+            if (d.getDay() === 0) continue;
+            dates.push(new Date(d));
+        }
+        dates.forEach(function (date) {
+            const opt = document.createElement('option');
+            const yyyy = date.getFullYear();
+            const mm   = String(date.getMonth() + 1).padStart(2, '0');
+            const dd   = String(date.getDate()).padStart(2, '0');
+            opt.value       = yyyy + '-' + mm + '-' + dd;
+            opt.textContent = DAYS[date.getDay()] + ' ' + date.getDate() + ' de ' + MONTHS[date.getMonth()];
+            daySelect.appendChild(opt);
+        });
+
+        function updateTimeSelect(dayValue) {
+            timeSelect.innerHTML = '<option value="" disabled selected>Selecciona una hora</option>';
+            if (!dayValue) return;
+            const parts = dayValue.split('-');
+            const date  = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            const slots = date.getDay() === 6 ? SLOTS_SATURDAY : SLOTS_WEEKDAY;
+            slots.forEach(function (slot) {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = slot;
+                timeSelect.appendChild(opt);
+            });
+        }
+
+        updateTimeSelect('');
+        daySelect.addEventListener('change', function () { updateTimeSelect(this.value); });
+    }
+
     // ── PDF popup ─────────────────────────────────────────────────────────────────
 
     const pdfFormConfigCache = new Map();
@@ -202,7 +249,7 @@
     async function openPdfPopup(pdfUrl, trigger, slug) {
         const pageUrl  = window.location.href;
         const cacheKey = slug || 'default';
-        const { overlay, card, body } = openDialog(trigger);
+        const { overlay, card, body } = openDialog(trigger, cacheKey);
 
         const loadingEl = addLoading(body);
 
@@ -235,6 +282,15 @@
         form.innerHTML  = (config && config.formHtml) ? config.formHtml : FALLBACK_PDF_FORM_HTML;
         body.appendChild(form);
         setTimestamp(form);
+        populateCallbackSelects(form);
+
+        const pdfCbTrigger = form.querySelector('input[name="pfe_callback_requested"]');
+        const pdfCbFields  = form.querySelector('.pfe-callback-fields');
+        if (pdfCbTrigger && pdfCbFields) {
+            pdfCbTrigger.addEventListener('change', function () {
+                pdfCbFields.style.display = this.checked ? '' : 'none';
+            });
+        }
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -268,7 +324,7 @@
     async function openGenericPopup(slug, trigger) {
         if (formConfigInflight.has(slug)) return;
 
-        const { overlay, card, body } = openDialog(trigger);
+        const { overlay, card, body } = openDialog(trigger, slug);
         const loadingEl = addLoading(body);
 
         let config;
@@ -320,6 +376,7 @@
         form.appendChild(hiddenSlug);
         body.appendChild(form);
         setTimestamp(form);
+        populateCallbackSelects(form);
 
         // Callback ("Llámame") toggle: reveal day/time fields when checkbox is checked.
         const callbackTrigger = form.querySelector('input[name="pfe_callback_requested"]');

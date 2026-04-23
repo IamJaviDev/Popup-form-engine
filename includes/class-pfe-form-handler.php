@@ -95,7 +95,7 @@ class FormHandler {
         $general   = $this->settings->getGeneral();
         $fromEmail = sanitize_email($general['from_email'] ?? get_option('admin_email'));
         $fromName  = sanitize_text_field($general['from_name'] ?? get_bloginfo('name'));
-        $headers   = ['Content-Type: text/html; charset=UTF-8', "From: {$fromName} <{$fromEmail}>"];
+        $headers   = ['Content-Type: text/html; charset=UTF-8'];
 
         // ── Callback email ─────────────────────────────────────────────────────────
         // Independent from internal email: fires whenever callback was requested and
@@ -103,7 +103,7 @@ class FormHandler {
 
         $callbackEmailSent = false;
         if ($callbackRequested && !empty($form['callback_email_recipients'])) {
-            $callbackEmailSent = $this->sendCallbackEmail($form, $formSlug, $data, $email, $callbackDay, $callbackTime, $headers);
+            $callbackEmailSent = $this->sendCallbackEmail($form, $formSlug, $data, $email, $callbackDay, $callbackTime, $headers, $fromEmail, $fromName);
         }
 
         // ── Newsletter ──────────────────────────────────────────────────────────────
@@ -181,7 +181,9 @@ class FormHandler {
         string $email,
         string $day,
         string $time,
-        array  $headers
+        array  $headers,
+        string $fromEmail,
+        string $fromName
     ): bool {
         $recipientsRaw = trim((string) ($form['callback_email_recipients'] ?? ''));
         $recipients    = array_filter(array_map('sanitize_email', explode("\n", $recipientsRaw)));
@@ -212,10 +214,16 @@ class FormHandler {
             }
         }
 
-        $ctFilter = function (): string { return 'text/html'; };
+        $ctFilter   = function (): string { return 'text/html'; };
+        $fromFilter = fn() => $fromEmail;
+        $nameFilter = fn() => $fromName;
         add_filter('wp_mail_content_type', $ctFilter);
+        add_filter('wp_mail_from',         $fromFilter);
+        add_filter('wp_mail_from_name',    $nameFilter);
         $sent = wp_mail(implode(',', $recipients), $subject, $body, $headers);
         remove_filter('wp_mail_content_type', $ctFilter);
+        remove_filter('wp_mail_from',         $fromFilter);
+        remove_filter('wp_mail_from_name',    $nameFilter);
 
         return (bool) $sent;
     }
