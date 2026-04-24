@@ -246,7 +246,7 @@
         '<input type="hidden" name="_pfe_ts" value="" data-pfe-ts="1">' +
         '<button type="submit" class="pfe-submit-btn">Enviar</button>';
 
-    async function openPdfPopup(pdfUrl, trigger, slug) {
+    async function openPdfPopup(pdfUrl, trigger, slug, templateSlug) {
         const pageUrl  = window.location.href;
         const cacheKey = slug || 'default';
         const { overlay, card, body } = openDialog(trigger, cacheKey);
@@ -301,6 +301,7 @@
             fd.append('pdfUrl',        pdfUrl);
             fd.append('pageUrl',       pageUrl);
             fd.append('pdf_form_slug', cacheKey);
+            if (templateSlug) fd.append('template_slug', templateSlug);
 
             try {
                 const res  = await postJson(restUrl + 'submit-pdf', Object.fromEntries(fd));
@@ -415,8 +416,9 @@
             const hasImg   = !!pdfLink.querySelector('img');
             if (hasClass || hasImg) {
                 e.preventDefault();
-                const pdfSlug = pdfLink.dataset.pdfFormSlug || 'default';
-                openPdfPopup(pdfLink.href, pdfLink, pdfSlug);
+                const pdfSlug      = pdfLink.dataset.pdfFormSlug  || 'default';
+                const templateSlug = pdfLink.dataset.templateSlug || null;
+                openPdfPopup(pdfLink.href, pdfLink, pdfSlug, templateSlug);
                 return;
             }
         }

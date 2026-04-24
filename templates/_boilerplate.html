@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es" dir="ltr">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tu guía está lista</title>
+    <style type="text/css">
+        body { margin: 0; padding: 0; background-color: #f4f4f4; }
+        table, td { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        @media only screen and (max-width: 600px) {
+            .main-table { width: 100% !important; }
+        }
+    </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f4;word-spacing:normal;">
+
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+           style="background-color:#f4f4f4;">
+        <tr>
+            <td align="center" style="padding:20px 0;">
+
+                <!-- Main container 600px -->
+                <table class="main-table" width="600" border="0" cellpadding="0" cellspacing="0"
+                       role="presentation"
+                       style="background-color:#ffffff;max-width:600px;width:100%;">
+
+                    <!-- Header: logo -->
+                    <tr>
+                        <td align="center" style="padding:24px 20px 16px;">
+                            <a href="{{ web }}" target="_blank" style="text-decoration:none;">
+                                <img src="{{ logo }}" alt="{{ empresa }}"
+                                     width="200"
+                                     style="display:block;max-width:200px;height:auto;border:0;">
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- Greeting -->
+                    <tr>
+                        <td style="padding:0 30px 16px;">
+                            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#555555;margin:0 0 12px;">
+                                Hola {{ nombre }},
+                            </p>
+                            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#555555;margin:0;">
+                                Hemos preparado la guía sobre <strong>{{ title }}</strong> para ti.
+                                A continuación encontrarás el enlace de descarga.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Download section -->
+                    <tr>
+                        <td align="center" style="background-color:#f9f9f9;padding:28px 30px;">
+                            <p style="font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#333333;margin:0 0 20px;text-align:center;">
+                                Tu guía está lista para descargar
+                            </p>
+                            <!-- Download button -->
+                            <table border="0" cellpadding="0" cellspacing="0" role="presentation">
+                                <tr>
+                                    <td align="center" style="border-radius:4px;background-color:{{ color_primario }};">
+                                        <a href="{{ pdf }}"
+                                           style="display:inline-block;padding:14px 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:4px;"
+                                           target="_blank">
+                                            DESCÁRGALA AQUÍ
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#999999;margin:14px 0 0;text-align:center;">
+                                Archivo PDF · Descarga inmediata y gratuita
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Body copy -->
+                    <tr>
+                        <td style="padding:24px 30px 8px;">
+                            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#555555;margin:0 0 12px;">
+                                Si tienes cualquier duda, no dudes en contactarnos:
+                            </p>
+                            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#555555;margin:0 0 6px;">
+                                📞 <strong>{{ telefono_empresa }}</strong>
+                            </p>
+                            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#555555;margin:0 0 20px;">
+                                ✉️ {{ email_empresa }}
+                            </p>
+                            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#555555;margin:0;">
+                                Un saludo,<br>
+                                <strong>{{ empresa }}</strong>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Spacer -->
+                    <tr>
+                        <td style="padding:20px 30px 0;">
+                            <hr style="border:none;border-top:1px solid #eeeeee;margin:0;">
+                        </td>
+                    </tr>
+
+                    <!-- Legal footer -->
+                    <tr>
+                        <td style="background-color:#f9f9f9;padding:16px 30px 20px;">
+                            <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#999999;line-height:1.5;">
+                                {{ aviso_legal }}
+                            </div>
+                        </td>
+                    </tr>
+
+                </table>
+                <!-- /Main container -->
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

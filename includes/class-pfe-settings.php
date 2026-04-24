@@ -121,6 +121,9 @@ class Settings {
      * and a getPdfByUrlTemplates() setting, then switch in PdfHandler based on
      * the strategy selected per-mapping entry.
      */
+    /**
+     * @deprecated Use resolveTemplate() instead. Kept for backwards compatibility.
+     */
     public function resolveTemplatePath(string $pageSlug): string {
         $fallback = PFE_DIR . 'templates/plantilla-base.html';
 
@@ -138,5 +141,136 @@ class Settings {
         }
 
         return $fallback;
+    }
+
+    // ── PDF email templates (DB-backed) ──────────────────────────────────────
+
+    public function getPdfEmailTemplates(): array {
+        return (array) get_option('pfe_pdf_email_templates', []);
+    }
+
+    public function savePdfEmailTemplates(array $templates): void {
+        update_option('pfe_pdf_email_templates', $templates);
+    }
+
+    public function getPdfEmailTemplateBySlug(string $slug): ?array {
+        foreach ($this->getPdfEmailTemplates() as $tpl) {
+            if (($tpl['slug'] ?? '') === $slug) return $tpl;
+        }
+        return null;
+    }
+
+    // ── PDF filename mappings ─────────────────────────────────────────────────
+
+    public function getPdfFileMappings(): array {
+        return (array) get_option('pfe_pdf_file_mappings', []);
+    }
+
+    public function savePdfFileMappings(array $mappings): void {
+        update_option('pfe_pdf_file_mappings', $mappings);
+    }
+
+    // ── Template resolution cascade ───────────────────────────────────────────
+
+    /**
+     * Resolves the best email template for a PDF submission.
+     *
+     * Returns an array with keys: source, subject, html_body, path, resolved_via
+     * or null if nothing is found.
+     */
+    public function resolveTemplate(string $pageSlug, string $pdfUrl, ?string $explicitSlug = null): ?array {
+        $pdfFilename = basename((string) parse_url($pdfUrl, PHP_URL_PATH));
+
+        // Paso 1: slug explícito (data-template-slug del enlace PDF)
+        if ($explicitSlug !== null && $explicitSlug !== '') {
+            $tpl = $this->getPdfEmailTemplateBySlug($explicitSlug);
+            if ($tpl !== null) return $this->buildDbResult($tpl, 'explicit');
+        }
+
+        // Paso 2: mapping por filename del PDF
+        foreach ($this->getPdfFileMappings() as $mapping) {
+            $needle  = (string) ($mapping['filename_contains'] ?? '');
+            $tplSlug = (string) ($mapping['template_slug']      ?? '');
+            if ($needle === '' || !str_contains($pdfFilename, $needle)) continue;
+            if ($tplSlug !== '') {
+                $tpl = $this->getPdfEmailTemplateBySlug($tplSlug);
+                if ($tpl !== null) return $this->buildDbResult($tpl, 'filename_mapping');
+            }
+        }
+
+        // Paso 3: template BD cuyo slug coincide exactamente con el page slug
+        $tpl = $this->getPdfEmailTemplateBySlug($pageSlug);
+        if ($tpl !== null) return $this->buildDbResult($tpl, 'page_direct');
+
+        // Paso 4: mappings por page slug (existentes, enriquecidos con template_slug)
+        foreach ($this->getPdfTemplates() as $mapping) {
+            $needle = (string) ($mapping['slug_contains'] ?? '');
+            if ($needle === '' || !str_contains($pageSlug, $needle)) continue;
+
+            $tplSlug = (string) ($mapping['template_slug'] ?? '');
+            if ($tplSlug !== '') {
+                $tpl = $this->getPdfEmailTemplateBySlug($tplSlug);
+                if ($tpl !== null) return $this->buildDbResult($tpl, 'page_mapping');
+            }
+
+            $tplFile = (string) ($mapping['template_file'] ?? '');
+            if ($tplFile !== '') {
+                $path = PFE_DIR . 'templates/' . basename($tplFile);
+                if (file_exists($path)) return $this->buildFileResult($path, 'page_mapping');
+            }
+        }
+
+        // Paso 5: template BD con slug 'default'
+        $tpl = $this->getPdfEmailTemplateBySlug('default');
+        if ($tpl !== null) return $this->buildDbResult($tpl, 'default');
+
+        // Paso 6: plantilla-base.html en disco
+        $fallback = PFE_DIR . 'templates/plantilla-base.html';
+        if (file_exists($fallback)) return $this->buildFileResult($fallback, 'fallback');
+
+        return null;
+    }
+
+    private function buildDbResult(array $tpl, string $via): array {
+        return [
+            'source'       => 'db',
+            'subject'      => (string) ($tpl['subject']   ?? ''),
+            'html_body'    => (string) ($tpl['html_body'] ?? ''),
+            'path'         => null,
+            'resolved_via' => $via,
+        ];
+    }
+
+    private function buildFileResult(string $path, string $via): array {
+        return [
+            'source'       => 'file',
+            'subject'      => null,
+            'html_body'    => '',
+            'path'         => $path,
+            'resolved_via' => $via,
+        ];
+    }
+
+    // ── Branding ──────────────────────────────────────────────────────────────
+
+    public function getBrandingDefaults(): array {
+        return [
+            'empresa'          => '',
+            'logo'             => '',
+            'color_primario'   => '',
+            'color_secundario' => '',
+            'web'              => '',
+            'telefono_empresa' => '',
+            'email_empresa'    => '',
+            'aviso_legal'      => '',
+        ];
+    }
+
+    public function getBranding(): array {
+        return array_merge($this->getBrandingDefaults(), (array) get_option('pfe_branding', []));
+    }
+
+    public function saveBranding(array $data): void {
+        update_option('pfe_branding', $data);
     }
 }

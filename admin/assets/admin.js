@@ -843,3 +843,313 @@
     // Nothing needed — the PHP-rendered list is the source of truth on first load.
 
 })();
+
+// ── PDF Email Templates builder ────────────────────────────────────────────
+(function () {
+    'use strict';
+
+    var tplListView  = document.getElementById('pfe-email-tpl-list-view');
+    var tplEditView  = document.getElementById('pfe-email-tpl-edit-view');
+    var tplCardSlot  = document.getElementById('pfe-email-tpl-card-slot');
+    var tplFormTpl   = document.getElementById('pfe-email-tpl-form-tpl');
+    var tplJsonInput = document.getElementById('pfe-pdf-tpl-json-input');
+    var tplMainForm  = document.getElementById('pfe-settings-form');
+
+    if (!tplListView || !tplEditView || !tplFormTpl || !tplJsonInput || !tplMainForm) return;
+
+    var templatesArray  = Array.isArray(pfeAdmin?.pdfEmailTemplatesData) ? [...pfeAdmin.pdfEmailTemplatesData] : [];
+    var tplEditingIdx   = -1;
+    var tplOrigSnapshot = null;
+
+    // ── Clipboard helpers ────────────────────────────────────────────────────
+
+    function fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+        ta.setAttribute('readonly', '');
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) { /* silent */ }
+        document.body.removeChild(ta);
+    }
+
+    function copyToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).catch(function () { fallbackCopy(text); });
+        } else {
+            fallbackCopy(text);
+        }
+    }
+
+    // ── Edit view ────────────────────────────────────────────────────────────
+
+    function openTplEditView(idx) {
+        tplEditingIdx = idx;
+        var tpl = (idx >= 0 && idx < templatesArray.length) ? templatesArray[idx] : {};
+
+        var node  = tplFormTpl.content.cloneNode(true);
+        var block = node.querySelector('.pfe-email-tpl-block');
+
+        tplSetField(block, 'slug',      tpl.slug      || '');
+        tplSetField(block, 'name',      tpl.name      || '');
+        tplSetField(block, 'subject',   tpl.subject   || '');
+        tplSetField(block, 'html_body', tpl.html_body || '');
+
+        // Insert into the live DOM before wiring events and populating dynamic content.
+        // Queries on detached DocumentFragment children are unreliable in some browsers.
+        tplCardSlot.innerHTML = '';
+        tplCardSlot.appendChild(block);
+
+        // Copy-to-clipboard for static variable buttons
+        block.querySelectorAll('.pfe-tpl-var-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                copyToClipboard(btn.dataset.var || '');
+                var orig = btn.textContent;
+                btn.textContent = '¡Copiado!';
+                setTimeout(function () { btn.textContent = orig; }, 800);
+            });
+        });
+
+        // Populate dynamic variables panel from pdfFormsData
+        (function () {
+            var dynVars  = block.querySelector('.pfe-tpl-dynamic-vars');
+            if (!dynVars) return;
+            var pdfForms = Array.isArray(pfeAdmin?.pdfFormsData) ? pfeAdmin.pdfFormsData : [];
+            var fieldMap = {}; // fieldName → [form slugs]
+            pdfForms.forEach(function (form) {
+                (form.fields || []).forEach(function (field) {
+                    var fname = field.name || '';
+                    if (!fname) return;
+                    if (!fieldMap[fname]) fieldMap[fname] = [];
+                    fieldMap[fname].push(form.slug || '?');
+                });
+            });
+            var fieldNames = Object.keys(fieldMap);
+            if (fieldNames.length === 0) {
+                dynVars.innerHTML =
+                    '<p style="font-size:11px;color:#888;margin:4px 0 0">' +
+                    'No hay formularios PDF configurados. Solo funcionan las variables especiales.</p>';
+                return;
+            }
+            var html = '<p style="font-size:11px;font-weight:600;margin:0 0 4px">Campos de formulario</p>';
+            fieldNames.forEach(function (fname) {
+                var varStr = '{{ ' + fname + ' }}';
+                var tip    = 'Usado en: ' + fieldMap[fname].join(', ');
+                html +=
+                    '<button type="button" class="button button-small pfe-tpl-dynvar-btn"' +
+                    ' data-var="' + tplEscHtml(varStr) + '"' +
+                    ' title="' + tplEscHtml(tip) + '"' +
+                    ' style="display:block;width:100%;margin-bottom:4px;text-align:left;font-family:monospace;font-size:11px">' +
+                    tplEscHtml(varStr) + '</button>';
+            });
+            html += '<p style="font-size:10px;color:#aaa;margin:4px 0 0">Pasar el ratón para ver en qué formularios aparece.</p>';
+            dynVars.innerHTML = html;
+            dynVars.querySelectorAll('.pfe-tpl-dynvar-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    copyToClipboard(btn.dataset.var || '');
+                    var orig = btn.textContent;
+                    btn.textContent = '¡Copiado!';
+                    setTimeout(function () { btn.textContent = orig; }, 800);
+                });
+            });
+        }());
+
+        // "Cargar plantilla base" button
+        var boilerplateBtn = block.querySelector('.pfe-tpl-load-boilerplate-btn');
+        if (boilerplateBtn) {
+            boilerplateBtn.addEventListener('click', function () {
+                var ta         = block.querySelector('[data-pfe-tpl-field="html_body"]');
+                var boilerplate = (pfeAdmin && pfeAdmin.templateBoilerplate) ? pfeAdmin.templateBoilerplate : '';
+                if (!ta) return;
+                if (boilerplate === '') { alert('No se encontró la plantilla base.'); return; }
+                if (ta.value !== '' && !window.confirm('¿Sobrescribir el contenido actual con la plantilla base?')) return;
+                ta.value = boilerplate;
+            });
+        }
+
+        // "Limpiar" button
+        var clearBtn = block.querySelector('.pfe-tpl-clear-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                var ta = block.querySelector('[data-pfe-tpl-field="html_body"]');
+                if (!ta) return;
+                if (!window.confirm('¿Vaciar el contenido HTML del template?')) return;
+                ta.value = '';
+            });
+        }
+
+        // Preview modal
+        var previewBtn   = block.querySelector('.pfe-tpl-preview-btn');
+        var previewModal = block.querySelector('.pfe-tpl-preview-modal');
+        var previewClose = block.querySelector('.pfe-tpl-preview-close');
+        var previewFrame = block.querySelector('.pfe-tpl-preview-frame');
+
+        if (previewBtn && previewModal && previewFrame) {
+            previewBtn.addEventListener('click', function () {
+                var html = tplGetField(block, 'html_body');
+                html = html.replace(/\{\{\s*nombre\s*\}\}/g,  'Juan Ejemplo');
+                html = html.replace(/\{\{\s*title\s*\}\}/g,   'Guía de ejemplo');
+                html = html.replace(/\{\{\s*pdf\s*\}\}/g,     'https://ejemplo.com/guia.pdf');
+                html = html.replace(/\{\{\s*country\s*\}\}/g, 'España');
+                html = html.replace(/\{\{\s*tel\s*\}\}/g,     '+34 600 000 000');
+                previewFrame.srcdoc = html;
+                previewModal.style.display = 'flex';
+            });
+        }
+        if (previewClose && previewModal) {
+            previewClose.addEventListener('click', function () {
+                previewModal.style.display = 'none';
+            });
+        }
+
+        tplOrigSnapshot = JSON.stringify(collectTplEditData());
+
+        tplListView.style.display = 'none';
+        tplEditView.style.display = '';
+        window.scrollTo(0, 0);
+    }
+
+    function closeTplEditView(force) {
+        if (!force) {
+            var current = JSON.stringify(collectTplEditData());
+            if (current !== tplOrigSnapshot) {
+                if (!window.confirm('¿Descartar los cambios no guardados?')) return;
+            }
+        }
+        tplEditView.style.display = 'none';
+        tplListView.style.display = '';
+        tplCardSlot.innerHTML     = '';
+        tplEditingIdx             = -1;
+    }
+
+    // ── Data collection ──────────────────────────────────────────────────────
+
+    function collectTplEditData() {
+        var block = tplCardSlot.querySelector('.pfe-email-tpl-block');
+        if (!block) return {};
+        return {
+            slug:      tplGetField(block, 'slug'),
+            name:      tplGetField(block, 'name'),
+            subject:   tplGetField(block, 'subject'),
+            html_body: tplGetField(block, 'html_body'),
+        };
+    }
+
+    // ── Save / Delete / Duplicate ────────────────────────────────────────────
+
+    function saveTplCurrentForm() {
+        var data = collectTplEditData();
+        if (!data.slug) {
+            alert('El slug es obligatorio.');
+            tplCardSlot.querySelector('[data-pfe-tpl-field="slug"]')?.focus();
+            return;
+        }
+        var duplicate = templatesArray.some(function (t, i) {
+            return t.slug === data.slug && i !== tplEditingIdx;
+        });
+        if (duplicate) {
+            alert('Ya existe un template con ese slug: "' + data.slug + '".');
+            return;
+        }
+        if (tplEditingIdx >= 0) {
+            templatesArray[tplEditingIdx] = data;
+        } else {
+            templatesArray.push(data);
+        }
+        tplJsonInput.value = JSON.stringify(templatesArray);
+        tplMainForm.submit();
+    }
+
+    function deleteTpl(idx, slug) {
+        if (!window.confirm('¿Eliminar el template "' + tplEscHtml(slug) + '"?')) return;
+        templatesArray.splice(idx, 1);
+        tplJsonInput.value = JSON.stringify(templatesArray);
+        tplMainForm.submit();
+    }
+
+    function duplicateTpl(idx) {
+        var src  = templatesArray[idx];
+        var copy = {
+            slug:      src.slug + '-copy',
+            name:      (src.name || '') + ' (copia)',
+            subject:   src.subject   || '',
+            html_body: src.html_body || '',
+        };
+        templatesArray.push(copy);
+        tplJsonInput.value = JSON.stringify(templatesArray);
+        tplMainForm.submit();
+    }
+
+    // ── Accessor helpers ─────────────────────────────────────────────────────
+
+    function tplGetField(parent, field) {
+        var el = parent.querySelector('[data-pfe-tpl-field="' + field + '"]');
+        return el ? el.value : '';
+    }
+
+    function tplSetField(parent, field, value) {
+        var el = parent.querySelector('[data-pfe-tpl-field="' + field + '"]');
+        if (el) el.value = value;
+    }
+
+    function tplEscHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ── Event wiring ─────────────────────────────────────────────────────────
+
+    tplListView.addEventListener('click', function (e) {
+        var editBtn = e.target.closest('.pfe-email-tpl-edit');
+        var dupBtn  = e.target.closest('.pfe-email-tpl-duplicate');
+        var delBtn  = e.target.closest('.pfe-email-tpl-delete');
+        var addBtn  = e.target.closest('.pfe-email-tpl-add-btn');
+
+        if (editBtn)       openTplEditView(parseInt(editBtn.dataset.tplIdx, 10));
+        else if (dupBtn)   duplicateTpl(parseInt(dupBtn.dataset.tplIdx, 10));
+        else if (delBtn)   deleteTpl(parseInt(delBtn.dataset.tplIdx, 10), delBtn.dataset.tplSlug || '');
+        else if (addBtn)   openTplEditView(-1);
+    });
+
+    document.getElementById('pfe-email-tpl-back')   ?.addEventListener('click', function () { closeTplEditView(false); });
+    document.getElementById('pfe-email-tpl-cancel') ?.addEventListener('click', function () { closeTplEditView(false); });
+    document.getElementById('pfe-email-tpl-save')   ?.addEventListener('click', saveTplCurrentForm);
+
+}());
+
+// ── Branding tab: media uploader ──────────────────────────────────────────────
+(function () {
+    'use strict';
+
+    var uploadBtns = document.querySelectorAll('.pfe-media-upload-btn');
+    if (!uploadBtns.length) return;
+
+    uploadBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var targetId    = btn.dataset.target || '';
+            var targetInput = targetId ? document.getElementById(targetId) : null;
+            if (!targetInput) return;
+
+            if (typeof wp === 'undefined' || !wp.media) {
+                alert('El media uploader de WordPress no está disponible en esta página.');
+                return;
+            }
+
+            var frame = wp.media({
+                title:    'Elegir imagen',
+                button:   { text: 'Usar esta imagen' },
+                multiple: false,
+                library:  { type: 'image' },
+            });
+
+            frame.on('select', function () {
+                var attachment = frame.state().get('selection').first().toJSON();
+                targetInput.value = attachment.url || '';
+            });
+
+            frame.open();
+        });
+    });
+}());

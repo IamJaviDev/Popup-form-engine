@@ -64,35 +64,107 @@ class PdfHandler {
             }
         }
 
-        // PAGE_SLUG_TEMPLATE mode (legacy): the email template is chosen from the
-        // URL slug of the page where the click happened, not from the PDF filename.
-        // Many templates contain hardcoded PDF download links and branded content;
-        // the {{ pdf }} placeholder replacement below is safe even when absent.
-        $cleanPath = trim((string) parse_url($pageUrl, PHP_URL_PATH), '/');
-        $segments  = $cleanPath !== '' ? explode('/', $cleanPath) : [];
-        $pageSlug  = end($segments) ?: '';
+        $cleanPath    = trim((string) parse_url($pageUrl, PHP_URL_PATH), '/');
+        $segments     = $cleanPath !== '' ? explode('/', $cleanPath) : [];
+        $pageSlug     = end($segments) ?: '';
+        $explicitSlug = sanitize_key($params['template_slug'] ?? '') ?: null;
 
-        $templatePath = $this->settings->resolveTemplatePath($pageSlug);
-        if (!file_exists($templatePath)) {
+        $resolved = $this->settings->resolveTemplate($pageSlug, $pdfUrl, $explicitSlug);
+        if ($resolved === null) {
             $this->logger->insert([
                 'ip' => $ip, 'user_agent' => $userAgent, 'flow_type' => 'pdf',
                 'email' => $email, 'consent_status' => $consent ? 'true' : 'false',
-                'status' => 'error', 'error_message' => 'Template not found: ' . $templatePath,
+                'status' => 'error', 'error_message' => 'No template resolved for pageSlug=' . $pageSlug,
             ]);
             return ['status' => 500, 'message' => __('No se encontró la plantilla de email.', 'popup-form-engine')];
         }
 
         $pdfFilename = basename((string) parse_url($pdfUrl, PHP_URL_PATH));
         $title       = ucfirst(str_replace('-', ' ', (string) preg_replace('/\.pdf$/i', '', $pdfFilename)));
-        $html        = (string) file_get_contents($templatePath);
-        $html        = str_replace(['{{ nombre }}','{{ title }}','{{ pdf }}','{{ country }}','{{ tel }}'],
-                                   [esc_html($name), esc_html($title), $pdfUrl, esc_html($country), esc_html($tel)],
-                                   $html);
 
-        $general   = $this->settings->getGeneral();
-        $fromEmail = sanitize_email($general['from_email'] ?? get_option('admin_email'));
-        $fromName  = sanitize_text_field($general['from_name'] ?? get_bloginfo('name'));
-        $subject   = apply_filters('pfe_pdf_email_subject', __('Tu enlace para descargar la guía', 'popup-form-engine'), $pageSlug);
+        if ($resolved['source'] === 'db') {
+            $html            = $resolved['html_body'];
+            $resolvedSubject = sanitize_text_field($resolved['subject'] ?? '');
+        } else {
+            $html            = (string) file_get_contents((string) $resolved['path']);
+            $resolvedSubject = '';
+        }
+
+        // ── Dynamic placeholder replacement (priority: form < marca < especiales) ────
+        $branding       = $this->settings->getBranding();
+        $brandingFields = ['empresa', 'logo', 'color_primario', 'color_secundario', 'web', 'telefono_empresa', 'email_empresa', 'aviso_legal'];
+        $systemKeys     = ['pdfUrl', 'pageUrl', 'pdf_form_slug', 'template_slug', 'action'];
+        // Branding + especiales are excluded from step 1 so POST fields cannot spoof them.
+        $reservedKeys   = array_merge(['title', 'pdf'], $brandingFields);
+        $searches       = [];
+        $replacements   = [];
+
+        // Step 1: form fields — lowest priority.
+        foreach ($params as $key => $rawValue) {
+            if (str_starts_with((string) $key, 'pfe_')) continue;
+            if (in_array($key, $systemKeys,   true)) continue;
+            if (in_array($key, $reservedKeys, true)) continue;
+            $searches[]     = '{{ ' . $key . ' }}';
+            $replacements[] = esc_html(sanitize_text_field((string) $rawValue));
+        }
+
+        // Step 2: branding fields — override any form field with the same name.
+        foreach (['empresa', 'telefono_empresa', 'email_empresa'] as $bk) {
+            $searches[]     = '{{ ' . $bk . ' }}';
+            $replacements[] = esc_html((string) ($branding[$bk] ?? ''));
+        }
+        foreach (['logo', 'web'] as $bk) {
+            $searches[]     = '{{ ' . $bk . ' }}';
+            $replacements[] = esc_url((string) ($branding[$bk] ?? ''));
+        }
+        foreach (['color_primario', 'color_secundario'] as $bk) {
+            $searches[]     = '{{ ' . $bk . ' }}';
+            $replacements[] = sanitize_hex_color((string) ($branding[$bk] ?? '')) ?? '';
+        }
+        // aviso_legal is HTML — already sanitized with wp_kses_post at save time.
+        $searches[]     = '{{ aviso_legal }}';
+        $replacements[] = (string) ($branding['aviso_legal'] ?? '');
+
+        // Step 3: special placeholders — always last, cannot be overridden.
+        $searches[]     = '{{ title }}';
+        $replacements[] = esc_html($title);
+        $searches[]     = '{{ pdf }}';
+        $replacements[] = $pdfUrl;
+
+        $html = str_replace($searches, $replacements, $html);
+        // Clear any remaining unresolved {{ placeholder }} — appear as empty, not as literal text.
+        $html = (string) preg_replace('/\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\}\}/', '', $html);
+
+        $general        = $this->settings->getGeneral();
+        $fromEmail      = sanitize_email($general['from_email'] ?? get_option('admin_email'));
+        $fromName       = sanitize_text_field($general['from_name'] ?? get_bloginfo('name'));
+        $defaultSubject = $resolvedSubject !== '' ? $resolvedSubject : __('Tu enlace para descargar la guía', 'popup-form-engine');
+        $subject        = apply_filters('pfe_pdf_email_subject', $defaultSubject, $pageSlug);
+
+        // Apply branding + especiales to subject. NOT form fields (security: prevents
+        // user-submitted values from appearing in the subject and enabling visual spoofing).
+        $sSearches = $sReplace = [];
+        foreach (['empresa', 'telefono_empresa', 'email_empresa'] as $bk) {
+            $sSearches[] = '{{ ' . $bk . ' }}';
+            $sReplace[]  = sanitize_text_field((string) ($branding[$bk] ?? ''));
+        }
+        foreach (['logo', 'web'] as $bk) {
+            $sSearches[] = '{{ ' . $bk . ' }}';
+            $sReplace[]  = sanitize_text_field((string) ($branding[$bk] ?? ''));
+        }
+        foreach (['color_primario', 'color_secundario'] as $bk) {
+            $sSearches[] = '{{ ' . $bk . ' }}';
+            $sReplace[]  = sanitize_hex_color((string) ($branding[$bk] ?? '')) ?? '';
+        }
+        $sSearches[] = '{{ aviso_legal }}';
+        $sReplace[]  = ''; // legal text not appropriate in a subject line
+        $sSearches[] = '{{ title }}';
+        $sReplace[]  = sanitize_text_field($title);
+        $sSearches[] = '{{ pdf }}';
+        $sReplace[]  = sanitize_text_field($pdfUrl);
+        $subject = str_replace($sSearches, $sReplace, $subject);
+        $subject = (string) preg_replace('/\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\}\}/', '', $subject);
+
         $headers    = ['Content-Type: text/html; charset=UTF-8'];
 
         $ctFilter   = function (): string { return 'text/html'; };
@@ -142,7 +214,7 @@ class PdfHandler {
 
         do_action('pfe_after_pdf_submit', $email, $pageSlug, $consent);
 
-        $logPayload = ['name' => $name, 'country' => $country, 'tel' => $tel, 'pdfUrl' => $pdfUrl];
+        $logPayload = ['name' => $name, 'country' => $country, 'tel' => $tel, 'pdfUrl' => $pdfUrl, 'resolved_via' => $resolved['resolved_via']];
         if ($callbackEnabled) {
             $logPayload['_callback_requested'] = $callbackRequested ? 'si' : 'no';
             if ($callbackRequested) {

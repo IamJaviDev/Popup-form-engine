@@ -5,7 +5,7 @@ use PopupFormEngine\Settings;
 
 class PFE_AdminPage {
 
-    private const TABS = ['general', 'forms', 'newsletter', 'pdf-templates', 'logs'];
+    private const TABS = ['general', 'forms', 'newsletter', 'pdf-templates', 'branding', 'logs'];
 
     public function __construct(private Settings $settings) {}
 
@@ -161,24 +161,91 @@ class PFE_AdminPage {
                     'timeout' => max(1, min(60, (int) ($_POST['newsletter_timeout'] ?? 10))),
                 ]);
                 break;
+            case 'branding':
+                $this->settings->saveBranding([
+                    'empresa'          => sanitize_text_field($_POST['branding_empresa']          ?? ''),
+                    'logo'             => esc_url_raw($_POST['branding_logo']                     ?? ''),
+                    'color_primario'   => sanitize_hex_color($_POST['branding_color_primario']    ?? '') ?? '',
+                    'color_secundario' => sanitize_hex_color($_POST['branding_color_secundario']  ?? '') ?? '',
+                    'web'              => esc_url_raw($_POST['branding_web']                      ?? ''),
+                    'telefono_empresa' => sanitize_text_field($_POST['branding_telefono_empresa'] ?? ''),
+                    'email_empresa'    => sanitize_email($_POST['branding_email_empresa']         ?? ''),
+                    'aviso_legal'      => wp_kses_post($_POST['branding_aviso_legal']             ?? ''),
+                ]);
+                break;
             case 'pdf-templates':
+                // ── 1. Newsletter PDF ──────────────────────────────────────────────────
                 $this->settings->savePdfNewsletter([
                     'enabled' => !empty($_POST['pdf_newsletter_enabled']),
                 ]);
+
+                // ── 2. Mappings por page slug (existentes + campo template_slug nuevo) ──
                 $rawMappings = is_array($_POST['pdf_mappings'] ?? null) ? $_POST['pdf_mappings'] : [];
                 $mappings    = [];
                 foreach ($rawMappings as $m) {
                     if (!is_array($m)) continue;
                     $sc = sanitize_text_field($m['slug_contains'] ?? '');
+                    $ts = sanitize_key($m['template_slug'] ?? '');
                     $tf = sanitize_file_name($m['template_file'] ?? '');
-                    if ($sc === '' || $tf === '') continue;
-                    // Ensure only a filename, no directory traversal.
-                    $tf = basename($tf);
-                    if (!preg_match('/\.html?$/i', $tf)) continue;
-                    $mappings[] = ['slug_contains' => $sc, 'template_file' => $tf];
+                    if ($sc === '') continue;
+                    if ($tf !== '') {
+                        $tf = basename($tf);
+                        if (!preg_match('/\.html?$/i', $tf)) $tf = '';
+                    }
+                    if ($ts === '' && $tf === '') continue;
+                    $entry = ['slug_contains' => $sc];
+                    if ($ts !== '') $entry['template_slug'] = $ts;
+                    if ($tf !== '') $entry['template_file']  = $tf;
+                    $mappings[] = $entry;
                 }
-                if (!empty($mappings)) {
-                    $this->settings->savePdfTemplates($mappings);
+                $this->settings->savePdfTemplates($mappings);
+
+                // ── 3. Mappings por filename de PDF ────────────────────────────────────
+                $rawFileMappings = is_array($_POST['pdf_file_mappings'] ?? null) ? $_POST['pdf_file_mappings'] : [];
+                $fileMappings    = [];
+                foreach ($rawFileMappings as $m) {
+                    if (!is_array($m)) continue;
+                    $fc = sanitize_text_field($m['filename_contains'] ?? '');
+                    $ts = sanitize_key($m['template_slug'] ?? '');
+                    if ($fc === '' || $ts === '') continue;
+                    $fileMappings[] = ['filename_contains' => $fc, 'template_slug' => $ts];
+                }
+                $this->settings->savePdfFileMappings($fileMappings);
+
+                // ── 4. Templates BD ────────────────────────────────────────────────────
+                $tplJsonRaw = isset($_POST['pfe_pdf_email_templates_json'])
+                    ? wp_unslash($_POST['pfe_pdf_email_templates_json'])
+                    : '';
+                if ($tplJsonRaw !== '') {
+                    $tplDecoded = json_decode($tplJsonRaw, true);
+                    if (is_array($tplDecoded)) {
+                        $templates = [];
+                        $slugsSeen = [];
+                        foreach ($tplDecoded as $t) {
+                            if (!is_array($t)) continue;
+                            $tSlug = sanitize_key($t['slug'] ?? '');
+                            if ($tSlug === '') continue;
+                            if (in_array($tSlug, $slugsSeen, true)) {
+                                wp_safe_redirect(add_query_arg([
+                                    'page' => 'popup-form-engine', 'tab' => 'pdf-templates',
+                                    'error' => 'duplicate_template_slug',
+                                ], admin_url('admin.php')));
+                                exit;
+                            }
+                            $slugsSeen[] = $tSlug;
+                            $templates[] = [
+                                'slug'      => $tSlug,
+                                'name'      => sanitize_text_field($t['name']    ?? ''),
+                                'subject'   => sanitize_text_field($t['subject'] ?? ''),
+                                // NO wp_kses_post: it destroys email HTML (removes DOCTYPE, <style>,
+                                // <head>, <meta> and breaks Outlook conditional comments).
+                                // Templates are only editable by admins with 'manage_options' capability
+                                // and the HTML is sent via wp_mail(), not rendered in the browser.
+                                'html_body' => (string) ($t['html_body'] ?? ''),
+                            ];
+                        }
+                        $this->settings->savePdfEmailTemplates($templates);
+                    }
                 }
                 break;
         }
@@ -205,6 +272,9 @@ class PFE_AdminPage {
             <?php endif; ?>
             <?php if ($error === 'nested_form'): ?>
                 <div class="notice notice-error is-dismissible"><p><?php esc_html_e('El HTML no puede contener etiquetas <form> anidadas.', 'popup-form-engine'); ?></p></div>
+            <?php endif; ?>
+            <?php if ($error === 'duplicate_template_slug'): ?>
+                <div class="notice notice-error is-dismissible"><p><?php esc_html_e('Ya existe un template de email con ese slug.', 'popup-form-engine'); ?></p></div>
             <?php endif; ?>
             <nav class="nav-tab-wrapper">
                 <?php foreach (self::TABS as $t): ?>
@@ -237,13 +307,19 @@ class PFE_AdminPage {
     }
 
     private function enqueueAssets(): void {
+        if (sanitize_key($_GET['tab'] ?? 'general') === 'branding') {
+            wp_enqueue_media();
+        }
         wp_enqueue_style('pfe-admin', PFE_URL . 'admin/assets/admin.css', [], PFE_VERSION);
         wp_enqueue_script('pfe-admin', PFE_URL . 'admin/assets/admin.js', [], PFE_VERSION, true);
+        $boilerplatePath = PFE_DIR . 'templates/_boilerplate.html';
         wp_localize_script('pfe-admin', 'pfeAdmin', [
-            'formsData'    => $this->settings->getForms(),
-            'pdfFormsData' => $this->settings->getPdfForms(),
-            'restUrl'      => esc_url_raw(rest_url('popup-form-engine/v1')),
-            'nonce'        => wp_create_nonce('pfe_rest_action'),
+            'formsData'             => $this->settings->getForms(),
+            'pdfFormsData'          => $this->settings->getPdfForms(),
+            'pdfEmailTemplatesData' => $this->settings->getPdfEmailTemplates(),
+            'templateBoilerplate'   => file_exists($boilerplatePath) ? (string) file_get_contents($boilerplatePath) : '',
+            'restUrl'               => esc_url_raw(rest_url('popup-form-engine/v1')),
+            'nonce'                 => wp_create_nonce('pfe_rest_action'),
         ]);
     }
 
@@ -253,6 +329,7 @@ class PFE_AdminPage {
             'forms'         => __('Formularios', 'popup-form-engine'),
             'newsletter'    => __('Newsletter', 'popup-form-engine'),
             'pdf-templates' => __('PDF / Templates', 'popup-form-engine'),
+            'branding'      => __('Marca', 'popup-form-engine'),
             'logs'          => __('Logs', 'popup-form-engine'),
             default         => ucfirst($tab),
         };

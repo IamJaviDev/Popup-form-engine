@@ -10,6 +10,7 @@ class Installer {
     public function run(): void {
         $this->createTable();
         $this->setDefaults();
+        $this->migratePdfTemplates();
     }
 
     private function createTable(): void {
@@ -78,6 +79,12 @@ class Installer {
         if (!get_option('pfe_pdf_templates')) {
             update_option('pfe_pdf_templates', $this->defaultPdfTemplates());
         }
+        if (!get_option('pfe_branding')) {
+            update_option('pfe_branding', [
+                'empresa' => '', 'logo' => '', 'color_primario' => '', 'color_secundario' => '',
+                'web' => '', 'telefono_empresa' => '', 'email_empresa' => '', 'aviso_legal' => '',
+            ]);
+        }
     }
 
     /**
@@ -96,6 +103,57 @@ class Installer {
      * NOTE: baja-de-un-vehiculo-robado was present in legacy templates/ but had
      * no mapping in the legacy PHP; the mapping here is a migration decision [new].
      */
+    /**
+     * Imports .html files from /templates/ into pfe_pdf_email_templates option.
+     * Enriches existing page-slug mappings with template_slug derived from template_file.
+     * Idempotent: skips if pfe_pdf_email_templates already has content.
+     */
+    private function migratePdfTemplates(): void {
+        $existing = get_option('pfe_pdf_email_templates');
+        if (is_array($existing) && !empty($existing)) {
+            // Already migrated; only ensure pfe_pdf_file_mappings exists.
+            if (get_option('pfe_pdf_file_mappings') === false) {
+                update_option('pfe_pdf_file_mappings', []);
+            }
+            return;
+        }
+
+        // Import all .html files from /templates/
+        $templDir  = PFE_DIR . 'templates/';
+        $htmlFiles = glob($templDir . '*.html') ?: [];
+        $templates = [];
+        foreach ($htmlFiles as $file) {
+            $slug        = basename($file, '.html');
+            $name        = ucfirst(str_replace('-', ' ', $slug));
+            $templates[] = [
+                'slug'      => $slug,
+                'name'      => $name,
+                'subject'   => 'Tu guía: ' . $name,
+                'html_body' => (string) file_get_contents($file),
+            ];
+        }
+        update_option('pfe_pdf_email_templates', $templates);
+
+        // Enrich existing page-slug mappings with template_slug
+        $mappings = (array) get_option('pfe_pdf_templates', []);
+        $enriched = false;
+        foreach ($mappings as &$m) {
+            if (empty($m['template_slug']) && !empty($m['template_file'])) {
+                $m['template_slug'] = basename((string) $m['template_file'], '.html');
+                $enriched = true;
+            }
+        }
+        unset($m);
+        if ($enriched) {
+            update_option('pfe_pdf_templates', $mappings);
+        }
+
+        // Initialize filename mappings
+        if (get_option('pfe_pdf_file_mappings') === false) {
+            update_option('pfe_pdf_file_mappings', []);
+        }
+    }
+
     private function defaultPdfTemplates(): array {
         return [
             // [legacy]

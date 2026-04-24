@@ -27,6 +27,10 @@ final class Plugin {
     }
 
     private function __construct() {
+        if (get_option('pfe_db_version') !== PFE_VERSION) {
+            (new Installer())->run();
+        }
+
         $this->settings     = new Settings();
         $this->security     = new Security();
         $this->rateLimiter  = new RateLimiter();
