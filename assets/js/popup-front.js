@@ -19,6 +19,17 @@
     let   dialogCounter = 0;
     const activeStack   = []; // { overlay, returnFocusEl }
 
+    // Returns true when running inside a page editor that should handle clicks itself.
+    function isInVisualBuilder() {
+        // Divi Visual Builder adds et-fb / et-bfb to <body> and et_fb=1 to the URL.
+        if (document.body.classList.contains('et-fb') ||
+            document.body.classList.contains('et-bfb')) return true;
+        try {
+            if (new URLSearchParams(window.location.search).get('et_fb') === '1') return true;
+        } catch (_) {}
+        return false;
+    }
+
     // ── Dialog factory ────────────────────────────────────────────────────────────
 
     /**
@@ -409,17 +420,38 @@
     // ── Click dispatcher ──────────────────────────────────────────────────────────
 
     document.addEventListener('click', function (e) {
-        // --- PDF flow ---
+        // Bail out inside visual page editors — let them handle their own click events.
+        if (isInVisualBuilder()) return;
+
+        // --- PDF flow: direct <a href$=".pdf"> ---
         const pdfLink = e.target.closest('a');
         if (pdfLink && /\.pdf(\?|#|$)/i.test(pdfLink.href)) {
-            const hasClass = pdfLink.classList.contains('pdf-popup');
-            const hasImg   = !!pdfLink.querySelector('img');
-            if (hasClass || hasImg) {
-                e.preventDefault();
-                const pdfSlug      = pdfLink.dataset.pdfFormSlug  || 'default';
-                const templateSlug = pdfLink.dataset.templateSlug || null;
-                openPdfPopup(pdfLink.href, pdfLink, pdfSlug, templateSlug);
-                return;
+            e.preventDefault();
+            const pdfSlug      = pdfLink.dataset.pdfFormSlug  || 'default';
+            const templateSlug = pdfLink.dataset.templateSlug || null;
+            openPdfPopup(pdfLink.href, pdfLink, pdfSlug, templateSlug);
+            return;
+        }
+
+        // --- PDF flow: overlay/div case ---
+        // Some carousel/slider modules (e.g. Divi Coverflow) place a positioned <div>
+        // over the <a>, so e.target is the overlay and closest('a') returns nothing.
+        // Traverse up to 4 ancestor levels to find a PDF link in the same slide container.
+        if (!pdfLink && e.target.tagName === 'DIV') {
+            let container = e.target.parentElement;
+            let levels    = 0;
+            while (container && container !== document.body && levels < 4) {
+                const candidateA = Array.from(container.querySelectorAll('a[href]'))
+                    .find(function (a) { return /\.pdf(\?|#|$)/i.test(a.href); });
+                if (candidateA) {
+                    e.preventDefault();
+                    const pdfSlug      = candidateA.dataset.pdfFormSlug  || 'default';
+                    const templateSlug = candidateA.dataset.templateSlug || null;
+                    openPdfPopup(candidateA.href, candidateA, pdfSlug, templateSlug);
+                    return;
+                }
+                container = container.parentElement;
+                levels++;
             }
         }
 
@@ -435,6 +467,6 @@
             if (slug) openGenericPopup(slug, formTrigger);
             return;
         }
-    });
+    }, true); // capture phase: fires before bubble-phase handlers of third-party modules
 
 })();
