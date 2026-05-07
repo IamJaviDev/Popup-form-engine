@@ -195,22 +195,16 @@ class PdfHandler {
             );
         }
 
-        $pdfNewsletter      = $this->settings->getPdfNewsletter();
-        $newsletterSent     = false;
-        $newsletterResponse = 'no_aplica';
-        $consentStatus      = 'no_aplica';
+        // The backend receives ALL submissions for remarketing. Admin newsletter
+        // settings only control whether the consent checkbox is shown in the popup.
+        $consentStatus      = $consent ? 'true' : 'false';
 
-        if (!empty($pdfNewsletter['enabled'])) {
-            $consentStatus = $consent ? 'true' : 'false';
-            if ($consent) {
-                $payload = apply_filters('pfe_newsletter_payload', [
-                    'email' => $email, 'name' => $name, 'phone' => $tel, 'consent' => true, 'guia' => true,
-                ], 'pdf');
-                $result             = $this->newsletter->send($payload);
-                $newsletterSent     = $result['sent'];
-                $newsletterResponse = $result['response'];
-            }
-        }
+        $payload = apply_filters('pfe_newsletter_payload', [
+            'email' => $email, 'name' => $name, 'phone' => $tel, 'consent' => $consent, 'guia' => true,
+        ], 'pdf');
+        $result             = $this->newsletter->send($payload);
+        $newsletterSent     = $result['sent'];
+        $newsletterResponse = $result['response'];
 
         do_action('pfe_after_pdf_submit', $email, $pageSlug, $consent);
 

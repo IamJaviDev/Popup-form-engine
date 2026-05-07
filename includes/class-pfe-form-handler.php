@@ -107,36 +107,25 @@ class FormHandler {
         }
 
         // ── Newsletter ──────────────────────────────────────────────────────────────
+        // The backend receives ALL submissions for remarketing. Admin newsletter
+        // settings only control whether the consent checkbox is shown in the popup.
 
-        $nlSent        = false;
-        $nlResponse    = 'no_aplica';
-        $consentStatus = 'no_aplica';
+        $consentStatus = $consent ? 'true' : 'false';
+        // Normalise field aliases: name/nombre, phone/tel/telefono
+        $nlName  = $data['name']  ?? $data['nombre']    ?? '';
+        $nlPhone = $data['phone'] ?? $data['tel']        ?? $data['telefono'] ?? '';
 
-        // Both per-form and global newsletter must be enabled to process subscription.
-        $formNlEnabled   = !empty($form['newsletter_enabled']);
-        $globalNlEnabled = $this->settings->isNewsletterEnabled();
+        $payload = apply_filters('pfe_newsletter_payload', [
+            'email'   => $email,
+            'name'    => $nlName,
+            'phone'   => $nlPhone,
+            'consent' => $consent,
+            'guia'    => true,
+        ], 'generic');
 
-        if ($formNlEnabled && $globalNlEnabled) {
-            $consentStatus = $consent ? 'true' : 'false';
-            if ($consent) {
-                // Normalise field aliases: name/nombre, phone/tel/telefono
-                $nlName  = $data['name']  ?? $data['nombre']    ?? '';
-                $nlPhone = $data['phone'] ?? $data['tel']        ?? $data['telefono'] ?? '';
-
-                $payload = apply_filters('pfe_newsletter_payload', [
-                    'email'   => $email,
-                    'name'    => $nlName,
-                    'phone'   => $nlPhone,
-                    'consent' => true,
-                    'guia'    => true,
-                    // source_domain is added by NewsletterClient::send()
-                ], 'generic');
-
-                $result     = $this->newsletter->send($payload);
-                $nlSent     = $result['sent'];
-                $nlResponse = $result['response'];
-            }
-        }
+        $result     = $this->newsletter->send($payload);
+        $nlSent     = $result['sent'];
+        $nlResponse = $result['response'];
 
         do_action('pfe_after_generic_submit', $email, $formSlug, $data, $consent);
 
