@@ -9,6 +9,65 @@ class NewsletterClient {
 
     public function __construct(private Settings $settings) {}
 
+    public function testConnection(): array {
+        $cfg     = $this->settings->getNewsletter();
+        $host    = trim((string) ($cfg['host'] ?? ''));
+        $timeout = (int) ($cfg['timeout'] ?? 10);
+
+        if ($host === '' && empty($cfg['endpoint'])) {
+            return [
+                'ok'      => false,
+                'reason'  => 'no_host',
+                'message' => __('No hay host receptor configurado.', 'popup-form-engine'),
+            ];
+        }
+
+        $url = $this->settings->getNewsletterEndpoint();
+
+        $payload = [
+            'email'         => 'test@example.com',
+            'name'          => 'Test PFE',
+            'phone'         => '000000000',
+            'consent'       => false,
+            'guia'          => false,
+            'source_domain' => (string) parse_url(home_url(), PHP_URL_HOST),
+            '_test'         => true,
+        ];
+
+        $start    = microtime(true);
+        $response = wp_remote_post($url, [
+            'timeout'   => $timeout,
+            'headers'   => ['Content-Type' => 'application/json'],
+            'body'      => wp_json_encode($payload),
+            'sslverify' => true,
+        ]);
+        $elapsedMs = (int) round((microtime(true) - $start) * 1000);
+
+        if (is_wp_error($response)) {
+            return [
+                'ok'         => false,
+                'reason'     => 'network_error',
+                'message'    => $response->get_error_message(),
+                'url'        => $url,
+                'payload'    => $payload,
+                'elapsed_ms' => $elapsedMs,
+            ];
+        }
+
+        $code = (int) wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+
+        return [
+            'ok'         => ($code >= 200 && $code < 300),
+            'reason'     => ($code >= 200 && $code < 300) ? 'success' : 'http_error',
+            'http_code'  => $code,
+            'body'       => $body,
+            'url'        => $url,
+            'payload'    => $payload,
+            'elapsed_ms' => $elapsedMs,
+        ];
+    }
+
     /** @return array{sent:bool,response:string} */
     public function send(array $payload): array {
         if (!$this->settings->isNewsletterEnabled()) {

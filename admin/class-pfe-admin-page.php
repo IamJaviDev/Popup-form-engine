@@ -327,10 +327,18 @@ class PFE_AdminPage {
         }
         wp_enqueue_style('pfe-admin', PFE_URL . 'admin/assets/admin.css', [], PFE_VERSION);
         wp_enqueue_script('pfe-admin', PFE_URL . 'admin/assets/admin.js', [], PFE_VERSION, true);
-        if (sanitize_key($_GET['tab'] ?? 'general') === 'logs') {
+        $currentTab = sanitize_key($_GET['tab'] ?? 'general');
+        if ($currentTab === 'logs') {
             wp_enqueue_script('pfe-admin-logs', PFE_URL . 'admin/assets/admin-logs.js', ['pfe-admin'], PFE_VERSION, true);
             wp_localize_script('pfe-admin-logs', 'pfeLogs', [
                 'nonce'   => wp_create_nonce('pfe_logs_purge'),
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+            ]);
+        }
+        if ($currentTab === 'newsletter') {
+            wp_enqueue_script('pfe-admin-newsletter', PFE_URL . 'admin/assets/admin-newsletter.js', [], PFE_VERSION, true);
+            wp_localize_script('pfe-admin-newsletter', 'pfeNewsletterTest', [
+                'nonce'   => wp_create_nonce('pfe_newsletter_test'),
                 'ajaxUrl' => admin_url('admin-ajax.php'),
             ]);
         }

@@ -54,6 +54,18 @@ $previewEndpoint = $savedHost !== ''
             </p>
         </td>
     </tr>
+    <tr>
+        <th scope="row"><?php esc_html_e('Probar conexión', 'popup-form-engine'); ?></th>
+        <td>
+            <button type="button" class="button pfe-nl-test-btn">
+                <?php esc_html_e('Enviar payload de prueba', 'popup-form-engine'); ?>
+            </button>
+            <p class="description">
+                <?php esc_html_e('Envía un payload de prueba con _test: true al backend configurado. El backend debe ignorar este envío para no crear leads falsos.', 'popup-form-engine'); ?>
+            </p>
+            <div class="pfe-nl-test-result" style="margin-top:1rem;display:none;"></div>
+        </td>
+    </tr>
 </table>
 
 <script>

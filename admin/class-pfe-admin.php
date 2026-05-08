@@ -12,7 +12,8 @@ class PFE_Admin {
         add_action('admin_menu',                   [$this, 'registerMenu']);
         add_action('admin_post_pfe_export_csv',    [$this, 'handleExportCsv']);
         add_action('admin_post_pfe_clean_logs',    [$this, 'handleCleanLogs']);
-        add_action('wp_ajax_pfe_logs_purge',       [$this, 'handleLogsPurge']);
+        add_action('wp_ajax_pfe_logs_purge',        [$this, 'handleLogsPurge']);
+        add_action('wp_ajax_pfe_newsletter_test',   [$this, 'handleNewsletterTest']);
     }
 
     public function registerMenu(): void {
@@ -49,6 +50,20 @@ class PFE_Admin {
         ], fn($v) => $v !== '');
 
         (new \PopupFormEngine\Logger())->exportCsv($filters);
+    }
+
+    /**
+     * wp_ajax_pfe_newsletter_test — sends a test payload to the configured backend.
+     */
+    public function handleNewsletterTest(): void {
+        check_ajax_referer('pfe_newsletter_test', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(['message' => 'forbidden'], 403);
+
+        $settings = new \PopupFormEngine\Settings();
+        $client   = new \PopupFormEngine\NewsletterClient($settings);
+        $result   = $client->testConnection();
+
+        wp_send_json_success($result);
     }
 
     /**
