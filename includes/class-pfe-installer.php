@@ -76,6 +76,9 @@ class Installer {
                 'web' => '', 'telefono_empresa' => '', 'email_empresa' => '', 'aviso_legal' => '',
             ]);
         }
+        if (get_option('pfe_logs_retention') === false) {
+            update_option('pfe_logs_retention', ['enabled' => false, 'days' => 90]);
+        }
     }
 
     /**

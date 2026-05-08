@@ -37,14 +37,15 @@ class Logger {
         );
     }
 
-    public function getLogs(array $filters = [], int $page = 1, int $per_page = 25): array {
+    public function getLogs(array $filters = [], int $page = 1, int $per_page = 50): array {
         global $wpdb;
-        $where = ['1=1'];
+        $where  = ['1=1'];
         $values = [];
         if (!empty($filters['flow_type']))      { $where[] = 'flow_type = %s';      $values[] = $filters['flow_type']; }
         if (!empty($filters['consent_status'])) { $where[] = 'consent_status = %s'; $values[] = $filters['consent_status']; }
         if (!empty($filters['date_from']))      { $where[] = 'created_at >= %s';    $values[] = $filters['date_from'] . ' 00:00:00'; }
         if (!empty($filters['date_to']))        { $where[] = 'created_at <= %s';    $values[] = $filters['date_to']   . ' 23:59:59'; }
+        if (!empty($filters['search_email']))   { $where[] = 'email LIKE %s';       $values[] = '%' . $wpdb->esc_like($filters['search_email']) . '%'; }
 
         $where_sql = implode(' AND ', $where);
         $offset    = ($page - 1) * $per_page;
@@ -63,6 +64,16 @@ class Logger {
             ), ARRAY_A);
         }
         return ['rows' => $rows ?: [], 'total' => $count];
+    }
+
+    public function getStats(): array {
+        global $wpdb;
+        return [
+            'total' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table}"),
+            'today' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table} WHERE DATE(created_at) = CURDATE()"),
+            'week'  => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"),
+            'month' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"),
+        ];
     }
 
     public function deleteBefore(int $days): int {

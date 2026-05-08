@@ -7,6 +7,12 @@ defined('ABSPATH') || exit;
 
 class PdfHandler {
 
+    /** System params excluded from the log payload. */
+    private const RESERVED = [
+        '_pfe_url', '_pfe_ts', 'pdfUrl', 'pageUrl', 'pdf_form_slug', 'template_slug',
+        'pfe_newsletter_consent', 'pfe_callback_requested', 'pfe_callback_day', 'pfe_callback_time',
+    ];
+
     public function __construct(
         private Settings         $settings,
         private NewsletterClient $newsletter,
@@ -15,10 +21,7 @@ class PdfHandler {
     ) {}
 
     public function handle(array $params, string $ip, string $userAgent): array {
-        $name    = sanitize_text_field($params['name'] ?? '');
         $email   = sanitize_email($params['email'] ?? '');
-        $country = sanitize_text_field($params['country'] ?? '');
-        $tel     = sanitize_text_field($params['tel'] ?? '');
         $pdfUrl  = esc_url_raw($params['pdfUrl'] ?? '');
         $pageUrl = sanitize_text_field($params['pageUrl'] ?? '');
         $consent = isset($params['pfe_newsletter_consent']) && $params['pfe_newsletter_consent'] === '1';
@@ -89,6 +92,27 @@ class PdfHandler {
             $html            = (string) file_get_contents((string) $resolved['path']);
             $resolvedSubject = '';
         }
+
+        // Build sanitized field data used for alias resolution, newsletter, and log.
+        $data = [];
+        foreach ((array) ($pdfFormConfig['fields'] ?? []) as $field) {
+            $fieldName = sanitize_key($field['name'] ?? '');
+            $fieldType = sanitize_key($field['type'] ?? 'text');
+            if ($fieldName === '' || in_array($fieldName, self::RESERVED, true)) continue;
+            $raw              = $params[$fieldName] ?? '';
+            $data[$fieldName] = $fieldType === 'textarea'
+                ? sanitize_textarea_field($raw)
+                : sanitize_text_field($raw);
+        }
+        $resolveAlias = static function(array $haystack, array $aliases): string {
+            foreach ($aliases as $alias) {
+                if (!empty($haystack[$alias])) return (string) $haystack[$alias];
+            }
+            return '';
+        };
+        $userName    = $resolveAlias($data, ['name', 'nombre', 'nombre_completo', 'fullname', 'full_name']);
+        $userPhone   = $resolveAlias($data, ['phone', 'tel', 'telefono', 'movil', 'mobile']);
+        $userCountry = $resolveAlias($data, ['country', 'pais']);
 
         // ── Dynamic placeholder replacement (priority: form < marca < especiales) ────
         $branding       = $this->settings->getBranding();
@@ -191,7 +215,7 @@ class PdfHandler {
         $callbackEmailSent = false;
         if ($callbackRequested && !empty($pdfFormConfig['callback_email_recipients'])) {
             $callbackEmailSent = $this->sendPdfCallbackEmail(
-                $pdfFormConfig, $pdfFormSlug, $name, $email, $callbackDay, $callbackTime, $fromEmail, $fromName
+                $pdfFormConfig, $pdfFormSlug, $userName, $userPhone, $userCountry, $email, $callbackDay, $callbackTime, $fromEmail, $fromName
             );
         }
 
@@ -200,7 +224,7 @@ class PdfHandler {
         $consentStatus      = $consent ? 'true' : 'false';
 
         $payload = apply_filters('pfe_newsletter_payload', [
-            'email' => $email, 'name' => $name, 'phone' => $tel, 'consent' => $consent, 'guia' => true,
+            'email' => $email, 'name' => $userName, 'phone' => $userPhone, 'consent' => $consent, 'guia' => true,
         ], 'pdf');
         $result             = $this->newsletter->send($payload);
         $newsletterSent     = $result['sent'];
@@ -208,7 +232,12 @@ class PdfHandler {
 
         do_action('pfe_after_pdf_submit', $email, $pageSlug, $consent);
 
-        $logPayload = ['name' => $name, 'country' => $country, 'tel' => $tel, 'pdfUrl' => $pdfUrl, 'resolved_via' => $resolved['resolved_via']];
+        $logData = $data;
+
+        $logPayload                = $logData;
+        $logPayload['pdfUrl']      = esc_url_raw($pdfUrl);
+        $logPayload['resolved_via'] = $resolved['resolved_via'];
+
         if ($callbackEnabled) {
             $logPayload['_callback_requested'] = $callbackRequested ? 'si' : 'no';
             if ($callbackRequested) {
@@ -238,6 +267,8 @@ class PdfHandler {
         array  $pdfFormConfig,
         string $pdfFormSlug,
         string $name,
+        string $phone,
+        string $country,
         string $email,
         string $day,
         string $time,
@@ -256,7 +287,9 @@ class PdfHandler {
         $body  = '<strong>' . esc_html__('Solicitud de llamada (formulario PDF)', 'popup-form-engine') . '</strong><br><br>';
         $body .= esc_html__('Formulario', 'popup-form-engine') . ': ' . esc_html($pdfFormSlug) . '<br>';
         $body .= 'Email: ' . esc_html($email) . '<br>';
-        if ($name !== '') $body .= esc_html__('Nombre', 'popup-form-engine') . ': ' . esc_html($name) . '<br>';
+        if ($name    !== '') $body .= esc_html__('Nombre',   'popup-form-engine') . ': ' . esc_html($name)    . '<br>';
+        if ($phone   !== '') $body .= esc_html__('Teléfono', 'popup-form-engine') . ': ' . esc_html($phone)   . '<br>';
+        if ($country !== '') $body .= esc_html__('País',     'popup-form-engine') . ': ' . esc_html($country) . '<br>';
         $body .= esc_html__('Día solicitado',  'popup-form-engine') . ': ' . esc_html($day)  . '<br>';
         $body .= esc_html__('Hora solicitada', 'popup-form-engine') . ': ' . esc_html($time) . '<br>';
 

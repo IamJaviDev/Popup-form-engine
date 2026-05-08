@@ -45,11 +45,19 @@ final class Plugin {
             $this->logger, $this->formRenderer
         );
 
-        add_action('rest_api_init',      [$this->rest, 'register']);
-        add_action('wp_enqueue_scripts', [$this, 'enqueueFrontend']);
+        add_action('rest_api_init',        [$this->rest, 'register']);
+        add_action('wp_enqueue_scripts',   [$this, 'enqueueFrontend']);
+        add_action('pfe_logs_cleanup_cron', [$this, 'runLogsCleanup']);
 
         if (is_admin()) {
             new \PFE_Admin($this->settings);
+        }
+    }
+
+    public function runLogsCleanup(): void {
+        $retention = $this->settings->getLogsRetention();
+        if (!empty($retention['enabled'])) {
+            $this->logger->deleteBefore((int) $retention['days']);
         }
     }
 

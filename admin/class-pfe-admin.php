@@ -9,9 +9,10 @@ class PFE_Admin {
 
     public function __construct(Settings $settings) {
         $this->adminPage = new PFE_AdminPage($settings);
-        add_action('admin_menu', [$this, 'registerMenu']);
-        add_action('admin_post_pfe_export_csv',  [$this, 'handleExportCsv']);
-        add_action('admin_post_pfe_clean_logs',  [$this, 'handleCleanLogs']);
+        add_action('admin_menu',                   [$this, 'registerMenu']);
+        add_action('admin_post_pfe_export_csv',    [$this, 'handleExportCsv']);
+        add_action('admin_post_pfe_clean_logs',    [$this, 'handleCleanLogs']);
+        add_action('wp_ajax_pfe_logs_purge',       [$this, 'handleLogsPurge']);
     }
 
     public function registerMenu(): void {
@@ -40,13 +41,26 @@ class PFE_Admin {
         if (!current_user_can('manage_options')) wp_die();
 
         $filters = array_filter([
-            'flow_type'      => sanitize_key($_GET['flow_type']      ?? ''),
-            'consent_status' => sanitize_key($_GET['consent_status'] ?? ''),
-            'date_from'      => sanitize_text_field($_GET['date_from'] ?? ''),
-            'date_to'        => sanitize_text_field($_GET['date_to']   ?? ''),
+            'flow_type'      => sanitize_key($_GET['flow_type']           ?? ''),
+            'consent_status' => sanitize_key($_GET['consent_status']      ?? ''),
+            'date_from'      => sanitize_text_field($_GET['date_from']    ?? ''),
+            'date_to'        => sanitize_text_field($_GET['date_to']      ?? ''),
+            'search_email'   => sanitize_text_field($_GET['search_email'] ?? ''),
         ], fn($v) => $v !== '');
 
         (new \PopupFormEngine\Logger())->exportCsv($filters);
+    }
+
+    /**
+     * wp_ajax_pfe_logs_purge — deletes logs older than N days, returns JSON.
+     */
+    public function handleLogsPurge(): void {
+        check_ajax_referer('pfe_logs_purge', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error([], 403);
+
+        $days    = max(1, (int) ($_POST['days'] ?? 90));
+        $deleted = (new \PopupFormEngine\Logger())->deleteBefore($days);
+        wp_send_json_success(['deleted' => $deleted]);
     }
 
     /**

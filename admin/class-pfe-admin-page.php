@@ -187,6 +187,12 @@ class PFE_AdminPage {
                     'aviso_legal'      => wp_kses_post($_POST['branding_aviso_legal']             ?? ''),
                 ]);
                 break;
+            case 'logs':
+                $this->settings->saveLogsRetention([
+                    'enabled' => !empty($_POST['logs_cleanup_enabled']),
+                    'days'    => (int) ($_POST['logs_cleanup_days'] ?? 90),
+                ]);
+                break;
             case 'pdf-templates':
                 // ── 1. Mappings por page slug (existentes + campo template_slug nuevo) ──
                 $rawMappings = is_array($_POST['pdf_mappings'] ?? null) ? $_POST['pdf_mappings'] : [];
@@ -298,7 +304,7 @@ class PFE_AdminPage {
                 <input type="hidden" name="pfe_save" value="1">
                 <input type="hidden" name="pfe_tab" value="<?php echo esc_attr($activeTab); ?>">
                 <?php $this->renderTab($activeTab); ?>
-                <?php if ($activeTab !== 'logs' && $activeTab !== 'forms'): ?>
+                <?php if ($activeTab !== 'forms'): ?>
                     <p class="submit">
                         <button type="submit" class="button button-primary"><?php esc_html_e('Guardar cambios', 'popup-form-engine'); ?></button>
                     </p>
@@ -321,6 +327,13 @@ class PFE_AdminPage {
         }
         wp_enqueue_style('pfe-admin', PFE_URL . 'admin/assets/admin.css', [], PFE_VERSION);
         wp_enqueue_script('pfe-admin', PFE_URL . 'admin/assets/admin.js', [], PFE_VERSION, true);
+        if (sanitize_key($_GET['tab'] ?? 'general') === 'logs') {
+            wp_enqueue_script('pfe-admin-logs', PFE_URL . 'admin/assets/admin-logs.js', ['pfe-admin'], PFE_VERSION, true);
+            wp_localize_script('pfe-admin-logs', 'pfeLogs', [
+                'nonce'   => wp_create_nonce('pfe_logs_purge'),
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+            ]);
+        }
         $boilerplatePath = PFE_DIR . 'templates/_boilerplate.html';
         wp_localize_script('pfe-admin', 'pfeAdmin', [
             'formsData'             => $this->settings->getForms(),

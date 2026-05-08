@@ -111,14 +111,19 @@ class FormHandler {
         // settings only control whether the consent checkbox is shown in the popup.
 
         $consentStatus = $consent ? 'true' : 'false';
-        // Normalise field aliases: name/nombre, phone/tel/telefono
-        $nlName  = $data['name']  ?? $data['nombre']    ?? '';
-        $nlPhone = $data['phone'] ?? $data['tel']        ?? $data['telefono'] ?? '';
+        $resolveAlias = static function(array $haystack, array $aliases): string {
+            foreach ($aliases as $alias) {
+                if (!empty($haystack[$alias])) return (string) $haystack[$alias];
+            }
+            return '';
+        };
+        $userName    = $resolveAlias($data, ['name', 'nombre', 'nombre_completo', 'fullname', 'full_name']);
+        $userPhone   = $resolveAlias($data, ['phone', 'tel', 'telefono', 'teléfono', 'movil', 'móvil', 'mobile']);
 
         $payload = apply_filters('pfe_newsletter_payload', [
             'email'   => $email,
-            'name'    => $nlName,
-            'phone'   => $nlPhone,
+            'name'    => $userName,
+            'phone'   => $userPhone,
             'consent' => $consent,
             'guia'    => true,
         ], 'generic');
@@ -183,8 +188,14 @@ class FormHandler {
             $formSlug
         );
 
-        $name  = $data['name']  ?? $data['nombre']   ?? '';
-        $phone = $data['phone'] ?? $data['tel']       ?? $data['telefono'] ?? '';
+        $resolveAlias = static function(array $haystack, array $aliases): string {
+            foreach ($aliases as $alias) {
+                if (!empty($haystack[$alias])) return (string) $haystack[$alias];
+            }
+            return '';
+        };
+        $name  = $resolveAlias($data, ['name', 'nombre', 'nombre_completo', 'fullname', 'full_name']);
+        $phone = $resolveAlias($data, ['phone', 'tel', 'telefono', 'teléfono', 'movil', 'móvil', 'mobile']);
 
         $body  = '<strong>' . esc_html__('Solicitud de llamada', 'popup-form-engine') . '</strong><br><br>';
         $body .= esc_html__('Formulario', 'popup-form-engine') . ': ' . esc_html($formSlug) . '<br>';
@@ -194,7 +205,7 @@ class FormHandler {
         $body .= esc_html__('Día solicitado',  'popup-form-engine') . ': ' . esc_html($day)  . '<br>';
         $body .= esc_html__('Hora solicitada', 'popup-form-engine') . ': ' . esc_html($time) . '<br>';
 
-        $skip = ['email', 'name', 'nombre', 'phone', 'tel', 'telefono'];
+        $skip = ['email', 'name', 'nombre', 'nombre_completo', 'fullname', 'full_name', 'phone', 'tel', 'telefono', 'teléfono', 'movil', 'móvil', 'mobile'];
         $extra = array_filter($data, fn($k) => !in_array($k, $skip, true), ARRAY_FILTER_USE_KEY);
         if (!empty($extra)) {
             $body .= '<br><strong>' . esc_html__('Otros datos del envío', 'popup-form-engine') . ':</strong><br>';

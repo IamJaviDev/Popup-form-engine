@@ -39,10 +39,13 @@ require_once PFE_DIR . 'admin/class-pfe-admin-page.php';
 
 register_activation_hook(__FILE__, function (): void {
     (new PopupFormEngine\Installer())->run();
+    if (!wp_next_scheduled('pfe_logs_cleanup_cron')) {
+        wp_schedule_event(time(), 'daily', 'pfe_logs_cleanup_cron');
+    }
 });
 
 register_deactivation_hook(__FILE__, function (): void {
-    // data is preserved on deactivate
+    wp_clear_scheduled_hook('pfe_logs_cleanup_cron');
 });
 
 add_action('plugins_loaded', function (): void {

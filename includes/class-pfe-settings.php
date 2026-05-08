@@ -249,6 +249,19 @@ class Settings {
         ];
     }
 
+    // ── Logs retention ───────────────────────────────────────────────────────
+
+    public function getLogsRetention(): array {
+        return wp_parse_args((array) get_option('pfe_logs_retention', []), ['enabled' => false, 'days' => 90]);
+    }
+
+    public function saveLogsRetention(array $data): void {
+        update_option('pfe_logs_retention', [
+            'enabled' => !empty($data['enabled']),
+            'days'    => max(1, min(365, (int) ($data['days'] ?? 90))),
+        ]);
+    }
+
     // ── Branding ──────────────────────────────────────────────────────────────
 
     public function getBrandingDefaults(): array {
