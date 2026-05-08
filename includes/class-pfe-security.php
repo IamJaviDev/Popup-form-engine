@@ -28,7 +28,20 @@ class Security {
     }
 
     public function isHoneypot(array $params): bool {
-        return isset($params['_pfe_hp']) && $params['_pfe_hp'] !== '';
+        $honeypotValue = trim((string) ($params['_pfe_url'] ?? ''));
+        if ($honeypotValue === '') {
+            return false;
+        }
+        // Value present: check if it's browser autofill duplicating another field.
+        // Autofill typically copies an existing value (e.g. email) into the honeypot.
+        // A real bot tends to inject values that don't match any submitted field.
+        foreach ($params as $key => $val) {
+            if ($key === '_pfe_url' || !is_string($val)) continue;
+            if (trim($val) === $honeypotValue) {
+                return false; // autofill false-positive — let the time-trap protect
+            }
+        }
+        return true; // non-matching value → treat as bot
     }
 
     public function isTimeTrap(array $params, int $minSeconds = 2): bool {

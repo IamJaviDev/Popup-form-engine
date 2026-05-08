@@ -15,14 +15,6 @@ class Settings {
         update_option('pfe_general', $data);
     }
 
-    public function getPdfNewsletter(): array {
-        return (array) get_option('pfe_pdf_newsletter', []);
-    }
-
-    public function savePdfNewsletter(array $data): void {
-        update_option('pfe_pdf_newsletter', $data);
-    }
-
     public function getNewsletter(): array {
         return (array) get_option('pfe_newsletter', []);
     }
@@ -172,6 +164,9 @@ class Settings {
 
     // ── Template resolution cascade ───────────────────────────────────────────
 
+    /** Physical files in /templates/ that may be used as automatic fallback by resolveTemplate(). */
+    private const FALLBACK_FILES_ALLOWED = ['_boilerplate.html', 'plantilla-base.html'];
+
     /**
      * Resolves the best email template for a PDF submission.
      *
@@ -215,8 +210,11 @@ class Settings {
 
             $tplFile = (string) ($mapping['template_file'] ?? '');
             if ($tplFile !== '') {
-                $path = PFE_DIR . 'templates/' . basename($tplFile);
-                if (file_exists($path)) return $this->buildFileResult($path, 'page_mapping');
+                $filename = basename($tplFile);
+                if (in_array($filename, self::FALLBACK_FILES_ALLOWED, true)) {
+                    $path = PFE_DIR . 'templates/' . $filename;
+                    if (file_exists($path)) return $this->buildFileResult($path, 'page_mapping');
+                }
             }
         }
 

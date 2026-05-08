@@ -1,7 +1,6 @@
 <?php
 defined('ABSPATH') || exit;
 
-$pdfNl          = $this->settings->getPdfNewsletter();
 $mappings       = $this->settings->getPdfTemplates();
 $fileMappings   = $this->settings->getPdfFileMappings();
 $emailTemplates = $this->settings->getPdfEmailTemplates();
@@ -14,22 +13,7 @@ foreach ($emailTemplates as $et) {
 }
 ?>
 
-<!-- ══ SECCIÓN 1: Newsletter PDF ════════════════════════════════════════════ -->
-<h2><?php esc_html_e('Newsletter en flujo PDF', 'popup-form-engine'); ?></h2>
-<table class="form-table" role="presentation">
-    <tr>
-        <th scope="row"><?php esc_html_e('Activar newsletter en PDF', 'popup-form-engine'); ?></th>
-        <td>
-            <label>
-                <input type="checkbox" name="pdf_newsletter_enabled" value="1"<?php checked(!empty($pdfNl['enabled'])); ?>>
-                <?php esc_html_e('Procesar suscripción newsletter al enviar un PDF', 'popup-form-engine'); ?>
-            </label>
-        </td>
-    </tr>
-</table>
-
-<!-- ══ SECCIÓN 2: Templates de email ════════════════════════════════════════ -->
-<hr>
+<!-- ══ SECCIÓN 1: Templates de email ════════════════════════════════════════ -->
 <h2><?php esc_html_e('Templates de email PDF', 'popup-form-engine'); ?></h2>
 <p class="description"><?php esc_html_e('Crea y edita los templates de email que se envían al usuario cuando solicita un PDF. Los templates se asignan a través de los mappings de las secciones inferiores.', 'popup-form-engine'); ?></p>
 
@@ -370,31 +354,30 @@ foreach ($emailTemplates as $et) {
 
 <!-- ── Files on disk (info only) ─────────────────────────────────────────── -->
 <hr>
-<h2><?php esc_html_e('Archivos de plantilla en /templates/', 'popup-form-engine'); ?></h2>
+<h2><?php esc_html_e('Archivos físicos en /templates/', 'popup-form-engine'); ?></h2>
+<p class="description">
+    <?php esc_html_e('Estos archivos se usan como fallback automático cuando no hay template BD configurado.', 'popup-form-engine'); ?>
+</p>
 <?php
-$onDisk     = glob($templDir . '*.html') ?: [];
-$referenced = array_map(fn($e) => basename($e['template_file'] ?? ''), $mappings);
-$referenced[] = 'plantilla-base.html';
+$allFiles        = array_map('basename', glob($templDir . '*.html') ?: []);
+$fallbackAllowed = ['_boilerplate.html', 'plantilla-base.html'];
+$allowedFiles    = array_values(array_intersect($allFiles, $fallbackAllowed));
+$legacyFiles     = array_values(array_diff($allFiles, $fallbackAllowed));
+$importedSlugs   = array_column($emailTemplates, 'slug');
 ?>
-<?php if (empty($onDisk)): ?>
-    <p><?php esc_html_e('No hay archivos HTML en /templates/.', 'popup-form-engine'); ?></p>
+<?php if (empty($allowedFiles)): ?>
+    <p><?php esc_html_e('No hay archivos de plantilla disponibles.', 'popup-form-engine'); ?></p>
 <?php else: ?>
 <table class="widefat striped">
     <thead>
         <tr>
             <th><?php esc_html_e('Archivo', 'popup-form-engine'); ?></th>
             <th><?php esc_html_e('Importado a BD', 'popup-form-engine'); ?></th>
-            <th><?php esc_html_e('Referenciado en mappings de página', 'popup-form-engine'); ?></th>
         </tr>
     </thead>
     <tbody>
-        <?php
-        $importedSlugs = array_column($emailTemplates, 'slug');
-        foreach ($onDisk as $tpl):
-            $basename = basename($tpl);
-            $slug     = basename($tpl, '.html');
-            $imported = in_array($slug, $importedSlugs, true);
-            $refed    = in_array($basename, $referenced, true);
+        <?php foreach ($allowedFiles as $basename):
+            $imported = in_array(basename($basename, '.html'), $importedSlugs, true);
         ?>
         <tr>
             <td><code><?php echo esc_html($basename); ?></code></td>
@@ -405,17 +388,34 @@ $referenced[] = 'plantilla-base.html';
                     <span style="color:#888">&mdash;</span>
                 <?php endif; ?>
             </td>
-            <td>
-                <?php if ($refed): ?>
-                    <span style="color:green">&#10003;</span>
-                <?php else: ?>
-                    <span style="color:#888">&mdash; <?php esc_html_e('Sin mapping (solo accesible por slug directo)', 'popup-form-engine'); ?></span>
-                <?php endif; ?>
-            </td>
         </tr>
         <?php endforeach; ?>
     </tbody>
 </table>
+<?php endif; ?>
+
+<?php if (!empty($legacyFiles)): ?>
+<details style="margin-top:1.5rem">
+    <summary style="cursor:pointer;font-weight:600">
+        <?php printf(
+            esc_html__('Mostrar archivos legacy (%d archivos no usados)', 'popup-form-engine'),
+            count($legacyFiles)
+        ); ?>
+    </summary>
+    <p class="description" style="margin-top:1rem">
+        <?php esc_html_e('Estos archivos están en el plugin por retrocompatibilidad con instalaciones antiguas. No se usan automáticamente. Pueden eliminarse manualmente del directorio si la instalación no los necesita.', 'popup-form-engine'); ?>
+    </p>
+    <table class="widefat striped">
+        <thead>
+            <tr><th><?php esc_html_e('Archivo', 'popup-form-engine'); ?></th></tr>
+        </thead>
+        <tbody>
+            <?php foreach ($legacyFiles as $basename): ?>
+            <tr><td><code><?php echo esc_html($basename); ?></code></td></tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</details>
 <?php endif; ?>
 
 <script>

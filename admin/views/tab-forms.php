@@ -228,6 +228,8 @@ $forms = $this->settings->getForms();
                 <p class="pfe-section-desc"><?php esc_html_e('CSS aplicado únicamente dentro del popup de este formulario.', 'popup-form-engine'); ?></p>
             </div>
             <div class="pfe-styles-details pfe-section-bd" style="display:none">
+
+                <p style="font-weight:600;margin:0 0 .5rem"><?php esc_html_e('Colores', 'popup-form-engine'); ?></p>
                 <table class="form-table pfe-compact-table" role="presentation">
                     <tr>
                         <th><?php esc_html_e('Color primario (botón, bordes)', 'popup-form-engine'); ?></th>
@@ -249,14 +251,142 @@ $forms = $this->settings->getForms();
                         </td>
                     </tr>
                     <tr>
+                        <th><?php esc_html_e('Color título y texto general', 'popup-form-engine'); ?></th>
+                        <td>
+                            <label style="display:inline-flex;align-items:center;gap:.5rem;cursor:pointer">
+                                <input type="checkbox" data-pfe-field="style_text_color_on">
+                                <span><?php esc_html_e('Activar', 'popup-form-engine'); ?></span>
+                            </label>
+                            <input type="color" data-pfe-field="style_text_color" value="#333333" style="margin-left:.5rem;vertical-align:middle">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color fondo de inputs', 'popup-form-engine'); ?></th>
+                        <td>
+                            <label style="display:inline-flex;align-items:center;gap:.5rem;cursor:pointer">
+                                <input type="checkbox" data-pfe-field="style_input_bg_color_on">
+                                <span><?php esc_html_e('Activar', 'popup-form-engine'); ?></span>
+                            </label>
+                            <input type="color" data-pfe-field="style_input_bg_color" value="#ffffff" style="margin-left:.5rem;vertical-align:middle">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color borde de inputs', 'popup-form-engine'); ?></th>
+                        <td>
+                            <label style="display:inline-flex;align-items:center;gap:.5rem;cursor:pointer">
+                                <input type="checkbox" data-pfe-field="style_input_border_color_on">
+                                <span><?php esc_html_e('Activar', 'popup-form-engine'); ?></span>
+                            </label>
+                            <input type="color" data-pfe-field="style_input_border_color" value="#8c8f94" style="margin-left:.5rem;vertical-align:middle">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color texto de inputs', 'popup-form-engine'); ?></th>
+                        <td>
+                            <label style="display:inline-flex;align-items:center;gap:.5rem;cursor:pointer">
+                                <input type="checkbox" data-pfe-field="style_input_text_color_on">
+                                <span><?php esc_html_e('Activar', 'popup-form-engine'); ?></span>
+                            </label>
+                            <input type="color" data-pfe-field="style_input_text_color" value="#2c3338" style="margin-left:.5rem;vertical-align:middle">
+                        </td>
+                    </tr>
+                </table>
+
+                <p style="font-weight:600;margin:1rem 0 .5rem"><?php esc_html_e('Tipografía y bordes', 'popup-form-engine'); ?></p>
+                <table class="form-table pfe-compact-table" role="presentation">
+                    <tr>
+                        <th><?php esc_html_e('Border-radius del card (0–30px)', 'popup-form-engine'); ?></th>
+                        <td>
+                            <input type="range" data-pfe-field="style_card_radius" min="0" max="30" step="1" value="0" style="vertical-align:middle">
+                            <output class="pfe-card-radius-output" style="margin-left:.5rem;font-variant-numeric:tabular-nums">0</output>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Border-radius de inputs y botón (0–50px)', 'popup-form-engine'); ?></th>
+                        <td>
+                            <input type="range" data-pfe-field="style_input_radius" min="0" max="50" step="1" value="0" style="vertical-align:middle">
+                            <output class="pfe-input-radius-output" style="margin-left:.5rem;font-variant-numeric:tabular-nums">0</output>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Tamaño del título', 'popup-form-engine'); ?></th>
+                        <td>
+                            <select data-pfe-field="style_title_size">
+                                <option value=""><?php esc_html_e('— predeterminado —', 'popup-form-engine'); ?></option>
+                                <option value="small"><?php esc_html_e('Pequeño (1.1rem)', 'popup-form-engine'); ?></option>
+                                <option value="medium"><?php esc_html_e('Mediano (1.4rem)', 'popup-form-engine'); ?></option>
+                                <option value="large"><?php esc_html_e('Grande (1.8rem)', 'popup-form-engine'); ?></option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+
+                <p style="font-weight:600;margin:1rem 0 .5rem"><?php esc_html_e('CSS libre', 'popup-form-engine'); ?></p>
+                <table class="form-table pfe-compact-table" role="presentation">
+                    <tr>
                         <th><?php esc_html_e('CSS personalizado', 'popup-form-engine'); ?></th>
                         <td>
                             <textarea data-pfe-field="style_custom_css" rows="6" class="large-text code"
                                       placeholder=".pfe-submit-btn { border-radius: 0; }"></textarea>
                             <p class="description"><?php esc_html_e('Los selectores se prefijarán automáticamente al scope del popup. No incluir etiquetas HTML.', 'popup-form-engine'); ?></p>
+                            <details class="pfe-css-classes-help" style="margin-top:.75rem">
+                                <summary style="cursor:pointer;font-weight:600;color:#2271b1"><?php esc_html_e('Ver clases CSS disponibles', 'popup-form-engine'); ?></summary>
+                                <p class="description" style="margin:.5rem 0"><?php esc_html_e('Clic en cualquier clase para copiarla:', 'popup-form-engine'); ?></p>
+                                <table class="widefat striped" style="margin-top:.5rem">
+                                    <thead><tr><th style="width:40%"><?php esc_html_e('Clase', 'popup-form-engine'); ?></th><th><?php esc_html_e('Descripción', 'popup-form-engine'); ?></th></tr></thead>
+                                    <tbody>
+                                        <?php foreach ([
+                                            ['.pfe-card',                 'Tarjeta principal del popup'],
+                                            ['.pfe-card-body',            'Contenido del card (padding interior)'],
+                                            ['.pfe-input',                'Inputs de texto, email, tel'],
+                                            ['.pfe-submit-btn',           'Botón de envío'],
+                                            ['.pfe-field-wrap',           'Contenedor de cada campo (label + input)'],
+                                            ['h2',                        'Título del popup'],
+                                            ['label',                     'Etiquetas de los campos'],
+                                            ['.pfe-overlay',              'Fondo oscuro detrás del popup'],
+                                            ['.pfe-close-btn',            'Botón de cerrar (×)'],
+                                            ['.pfe-msg-area',             'Zona de mensajes (éxito/error)'],
+                                            ['.pfe-newsletter-consent',   'Contenedor del checkbox newsletter'],
+                                            ['.pfe-callback-fields',      'Bloque de día/hora del callback'],
+                                            ['.pfe-callback-day-select',  'Select de día (Llámame)'],
+                                            ['.pfe-callback-time-select', 'Select de hora (Llámame)'],
+                                            ['.pfe-loading',              'Estado de carga'],
+                                            ['textarea',                  'Áreas de texto (campos textarea)'],
+                                            ['select',                    'Selects nativos del formulario'],
+                                        ] as [$cls, $desc]): ?>
+                                        <tr>
+                                            <td><code class="pfe-css-class-btn" data-css="<?php echo esc_attr($cls); ?>" style="cursor:pointer;background:#f0f0f1;padding:2px 6px;border-radius:3px"><?php echo esc_html($cls); ?></code></td>
+                                            <td><?php echo esc_html($desc); ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                                <p class="description" style="margin-top:.75rem;font-style:italic"><?php esc_html_e('Ejemplo:', 'popup-form-engine'); ?><br>
+                                    <code style="display:block;background:#f6f7f7;padding:.5rem;margin-top:.25rem">.pfe-field-wrap { margin-bottom: 1.5rem; }</code>
+                                </p>
+                            </details>
                         </td>
                     </tr>
                 </table>
+
+                <p style="margin-top:1rem">
+                    <button type="button" class="button pfe-style-preview-btn">
+                        <?php esc_html_e('Vista previa', 'popup-form-engine'); ?>
+                    </button>
+                </p>
+                <div class="pfe-style-preview-modal"
+                     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999999;align-items:center;justify-content:center">
+                    <div style="background:#fff;width:90vw;max-width:800px;height:90vh;border-radius:4px;overflow:hidden;display:flex;flex-direction:column">
+                        <div style="padding:8px 16px;background:#f0f0f0;display:flex;align-items:center;gap:8px">
+                            <strong><?php esc_html_e('Vista previa del popup', 'popup-form-engine'); ?></strong>
+                            <button type="button" class="button pfe-style-preview-close" style="margin-left:auto">
+                                <?php esc_html_e('Cerrar', 'popup-form-engine'); ?>
+                            </button>
+                        </div>
+                        <iframe class="pfe-style-preview-frame" style="flex:1;border:none;width:100%" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -452,6 +582,8 @@ $forms = $this->settings->getForms();
                 <p class="pfe-section-desc"><?php esc_html_e('CSS aplicado únicamente dentro del popup de este formulario.', 'popup-form-engine'); ?></p>
             </div>
             <div class="pfe-pdf-styles-details pfe-section-bd" style="display:none">
+
+                <p style="font-weight:600;margin:0 0 .5rem"><?php esc_html_e('Colores', 'popup-form-engine'); ?></p>
                 <table class="form-table pfe-compact-table" role="presentation">
                     <tr>
                         <th><?php esc_html_e('Color primario (botón, bordes)', 'popup-form-engine'); ?></th>
@@ -473,14 +605,142 @@ $forms = $this->settings->getForms();
                         </td>
                     </tr>
                     <tr>
+                        <th><?php esc_html_e('Color título y texto general', 'popup-form-engine'); ?></th>
+                        <td>
+                            <label style="display:inline-flex;align-items:center;gap:.5rem;cursor:pointer">
+                                <input type="checkbox" data-pfe-pdf-field="style_text_color_on">
+                                <span><?php esc_html_e('Activar', 'popup-form-engine'); ?></span>
+                            </label>
+                            <input type="color" data-pfe-pdf-field="style_text_color" value="#333333" style="margin-left:.5rem;vertical-align:middle">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color fondo de inputs', 'popup-form-engine'); ?></th>
+                        <td>
+                            <label style="display:inline-flex;align-items:center;gap:.5rem;cursor:pointer">
+                                <input type="checkbox" data-pfe-pdf-field="style_input_bg_color_on">
+                                <span><?php esc_html_e('Activar', 'popup-form-engine'); ?></span>
+                            </label>
+                            <input type="color" data-pfe-pdf-field="style_input_bg_color" value="#ffffff" style="margin-left:.5rem;vertical-align:middle">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color borde de inputs', 'popup-form-engine'); ?></th>
+                        <td>
+                            <label style="display:inline-flex;align-items:center;gap:.5rem;cursor:pointer">
+                                <input type="checkbox" data-pfe-pdf-field="style_input_border_color_on">
+                                <span><?php esc_html_e('Activar', 'popup-form-engine'); ?></span>
+                            </label>
+                            <input type="color" data-pfe-pdf-field="style_input_border_color" value="#8c8f94" style="margin-left:.5rem;vertical-align:middle">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Color texto de inputs', 'popup-form-engine'); ?></th>
+                        <td>
+                            <label style="display:inline-flex;align-items:center;gap:.5rem;cursor:pointer">
+                                <input type="checkbox" data-pfe-pdf-field="style_input_text_color_on">
+                                <span><?php esc_html_e('Activar', 'popup-form-engine'); ?></span>
+                            </label>
+                            <input type="color" data-pfe-pdf-field="style_input_text_color" value="#2c3338" style="margin-left:.5rem;vertical-align:middle">
+                        </td>
+                    </tr>
+                </table>
+
+                <p style="font-weight:600;margin:1rem 0 .5rem"><?php esc_html_e('Tipografía y bordes', 'popup-form-engine'); ?></p>
+                <table class="form-table pfe-compact-table" role="presentation">
+                    <tr>
+                        <th><?php esc_html_e('Border-radius del card (0–30px)', 'popup-form-engine'); ?></th>
+                        <td>
+                            <input type="range" data-pfe-pdf-field="style_card_radius" min="0" max="30" step="1" value="0" style="vertical-align:middle">
+                            <output class="pfe-card-radius-output" style="margin-left:.5rem;font-variant-numeric:tabular-nums">0</output>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Border-radius de inputs y botón (0–50px)', 'popup-form-engine'); ?></th>
+                        <td>
+                            <input type="range" data-pfe-pdf-field="style_input_radius" min="0" max="50" step="1" value="0" style="vertical-align:middle">
+                            <output class="pfe-input-radius-output" style="margin-left:.5rem;font-variant-numeric:tabular-nums">0</output>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Tamaño del título', 'popup-form-engine'); ?></th>
+                        <td>
+                            <select data-pfe-pdf-field="style_title_size">
+                                <option value=""><?php esc_html_e('— predeterminado —', 'popup-form-engine'); ?></option>
+                                <option value="small"><?php esc_html_e('Pequeño (1.1rem)', 'popup-form-engine'); ?></option>
+                                <option value="medium"><?php esc_html_e('Mediano (1.4rem)', 'popup-form-engine'); ?></option>
+                                <option value="large"><?php esc_html_e('Grande (1.8rem)', 'popup-form-engine'); ?></option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+
+                <p style="font-weight:600;margin:1rem 0 .5rem"><?php esc_html_e('CSS libre', 'popup-form-engine'); ?></p>
+                <table class="form-table pfe-compact-table" role="presentation">
+                    <tr>
                         <th><?php esc_html_e('CSS personalizado', 'popup-form-engine'); ?></th>
                         <td>
                             <textarea data-pfe-pdf-field="style_custom_css" rows="6" class="large-text code"
                                       placeholder=".pfe-submit-btn { border-radius: 0; }"></textarea>
                             <p class="description"><?php esc_html_e('Los selectores se prefijarán automáticamente al scope del popup. No incluir etiquetas HTML.', 'popup-form-engine'); ?></p>
+                            <details class="pfe-css-classes-help" style="margin-top:.75rem">
+                                <summary style="cursor:pointer;font-weight:600;color:#2271b1"><?php esc_html_e('Ver clases CSS disponibles', 'popup-form-engine'); ?></summary>
+                                <p class="description" style="margin:.5rem 0"><?php esc_html_e('Clic en cualquier clase para copiarla:', 'popup-form-engine'); ?></p>
+                                <table class="widefat striped" style="margin-top:.5rem">
+                                    <thead><tr><th style="width:40%"><?php esc_html_e('Clase', 'popup-form-engine'); ?></th><th><?php esc_html_e('Descripción', 'popup-form-engine'); ?></th></tr></thead>
+                                    <tbody>
+                                        <?php foreach ([
+                                            ['.pfe-card',                 'Tarjeta principal del popup'],
+                                            ['.pfe-card-body',            'Contenido del card (padding interior)'],
+                                            ['.pfe-input',                'Inputs de texto, email, tel'],
+                                            ['.pfe-submit-btn',           'Botón de envío'],
+                                            ['.pfe-field-wrap',           'Contenedor de cada campo (label + input)'],
+                                            ['h2',                        'Título del popup'],
+                                            ['label',                     'Etiquetas de los campos'],
+                                            ['.pfe-overlay',              'Fondo oscuro detrás del popup'],
+                                            ['.pfe-close-btn',            'Botón de cerrar (×)'],
+                                            ['.pfe-msg-area',             'Zona de mensajes (éxito/error)'],
+                                            ['.pfe-newsletter-consent',   'Contenedor del checkbox newsletter'],
+                                            ['.pfe-callback-fields',      'Bloque de día/hora del callback'],
+                                            ['.pfe-callback-day-select',  'Select de día (Llámame)'],
+                                            ['.pfe-callback-time-select', 'Select de hora (Llámame)'],
+                                            ['.pfe-loading',              'Estado de carga'],
+                                            ['textarea',                  'Áreas de texto (campos textarea)'],
+                                            ['select',                    'Selects nativos del formulario'],
+                                        ] as [$cls, $desc]): ?>
+                                        <tr>
+                                            <td><code class="pfe-css-class-btn" data-css="<?php echo esc_attr($cls); ?>" style="cursor:pointer;background:#f0f0f1;padding:2px 6px;border-radius:3px"><?php echo esc_html($cls); ?></code></td>
+                                            <td><?php echo esc_html($desc); ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                                <p class="description" style="margin-top:.75rem;font-style:italic"><?php esc_html_e('Ejemplo:', 'popup-form-engine'); ?><br>
+                                    <code style="display:block;background:#f6f7f7;padding:.5rem;margin-top:.25rem">.pfe-field-wrap { margin-bottom: 1.5rem; }</code>
+                                </p>
+                            </details>
                         </td>
                     </tr>
                 </table>
+
+                <p style="margin-top:1rem">
+                    <button type="button" class="button pfe-style-preview-btn">
+                        <?php esc_html_e('Vista previa', 'popup-form-engine'); ?>
+                    </button>
+                </p>
+                <div class="pfe-style-preview-modal"
+                     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999999;align-items:center;justify-content:center">
+                    <div style="background:#fff;width:90vw;max-width:800px;height:90vh;border-radius:4px;overflow:hidden;display:flex;flex-direction:column">
+                        <div style="padding:8px 16px;background:#f0f0f0;display:flex;align-items:center;gap:8px">
+                            <strong><?php esc_html_e('Vista previa del popup', 'popup-form-engine'); ?></strong>
+                            <button type="button" class="button pfe-style-preview-close" style="margin-left:auto">
+                                <?php esc_html_e('Cerrar', 'popup-form-engine'); ?>
+                            </button>
+                        </div>
+                        <iframe class="pfe-style-preview-frame" style="flex:1;border:none;width:100%" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+
             </div>
         </div>
 

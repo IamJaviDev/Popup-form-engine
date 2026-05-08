@@ -253,7 +253,10 @@
         '<div class="pfe-field-wrap pfe-newsletter-consent">' +
             '<label><input type="checkbox" name="pfe_newsletter_consent" value="1"> Quiero recibir novedades por email</label>' +
         '</div>' +
-        '<input type="text" name="_pfe_hp" value="" autocomplete="off" aria-hidden="true" tabindex="-1" style="position:absolute;left:-9999px;width:1px;height:1px;">' +
+        '<div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">' +
+            '<label>Si eres humano, deja este campo vacío:</label>' +
+            '<input type="url" name="_pfe_url" value="" autocomplete="off" tabindex="-1">' +
+        '</div>' +
         '<input type="hidden" name="_pfe_ts" value="" data-pfe-ts="1">' +
         '<button type="submit" class="pfe-submit-btn">Enviar</button>';
 
@@ -433,25 +436,65 @@
             return;
         }
 
-        // --- PDF flow: overlay/div case ---
-        // Some carousel/slider modules (e.g. Divi Coverflow) place a positioned <div>
-        // over the <a>, so e.target is the overlay and closest('a') returns nothing.
-        // Traverse up to 4 ancestor levels to find a PDF link in the same slide container.
-        if (!pdfLink && e.target.tagName === 'DIV') {
-            let container = e.target.parentElement;
-            let levels    = 0;
-            while (container && container !== document.body && levels < 4) {
-                const candidateA = Array.from(container.querySelectorAll('a[href]'))
-                    .find(function (a) { return /\.pdf(\?|#|$)/i.test(a.href); });
-                if (candidateA) {
+        // --- PDF flow: .pdf-popup container wrapping an <a href$=".pdf"> ---
+        // Handles clicks on padded container areas (e.g. <p class="boton pdf-popup">) where
+        // the <a> does not fill the full clickable zone and closest('a') found nothing.
+        if (!pdfLink) {
+            const popupContainer = e.target.closest('.pdf-popup');
+            if (popupContainer) {
+                const innerPdf = popupContainer.querySelector('a[href]');
+                if (innerPdf && /\.pdf(\?|#|$)/i.test(innerPdf.href)) {
                     e.preventDefault();
-                    const pdfSlug      = candidateA.dataset.pdfFormSlug  || 'default';
-                    const templateSlug = candidateA.dataset.templateSlug || null;
-                    openPdfPopup(candidateA.href, candidateA, pdfSlug, templateSlug);
+                    e.stopPropagation(); // prevent bubble reaching inner <a target="_blank">
+                    const pdfSlug      = popupContainer.dataset.pdfFormSlug || innerPdf.dataset.pdfFormSlug || 'default';
+                    const templateSlug = popupContainer.dataset.templateSlug || innerPdf.dataset.templateSlug || null;
+                    openPdfPopup(innerPdf.href, popupContainer, pdfSlug, templateSlug);
                     return;
                 }
-                container = container.parentElement;
-                levels++;
+            }
+        }
+
+        // --- PDF flow: overlay/div case (Divi Coverflow) ---
+        // Coverflow places a position:absolute <div> over the <a>, so e.target is the
+        // overlay and closest('a') returns nothing. Two guards prevent false positives:
+        //   1. e.target must be position:absolute or fixed (not a structural row/column)
+        //   2. Max 2 ancestor levels — direct parent or grandparent only
+        if (!pdfLink && e.target.tagName === 'DIV') {
+            const pos = window.getComputedStyle(e.target).position;
+            if (pos === 'absolute' || pos === 'fixed') {
+                let container = e.target.parentElement;
+                let depth     = 0;
+                while (container && container !== document.body && depth < 2) {
+                    const candidateA = Array.from(container.querySelectorAll('a[href]'))
+                        .find(function (a) { return /\.pdf(\?|#|$)/i.test(a.href); });
+                    if (candidateA) {
+                        e.preventDefault();
+                        const pdfSlug      = candidateA.dataset.pdfFormSlug  || 'default';
+                        const templateSlug = candidateA.dataset.templateSlug || null;
+                        openPdfPopup(candidateA.href, candidateA, pdfSlug, templateSlug);
+                        return;
+                    }
+                    container = container.parentElement;
+                    depth++;
+                }
+            }
+        }
+
+        // --- PDF flow: Divi Essentials Coverflow with <span data-link="url.pdf,_self"> ---
+        // Some Coverflow variants use a non-standard <span href="..."> as the link element.
+        // The real PDF URL lives in data-link as "URL,target" — the <a> selector finds nothing.
+        if (e.target.tagName === 'DIV' || e.target.tagName === 'IMG') {
+            const dnxteSpan = e.target.closest('[data-link]');
+            if (dnxteSpan) {
+                const pdfUrl = (dnxteSpan.getAttribute('data-link') || '').split(',')[0].trim();
+                if (pdfUrl && /\.pdf(\?|#|$)/i.test(pdfUrl)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const pdfSlug      = dnxteSpan.dataset.pdfFormSlug  || 'default';
+                    const templateSlug = dnxteSpan.dataset.templateSlug || null;
+                    openPdfPopup(pdfUrl, dnxteSpan, pdfSlug, templateSlug);
+                    return;
+                }
             }
         }
 

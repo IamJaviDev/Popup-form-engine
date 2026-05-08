@@ -185,7 +185,10 @@ class FormRenderer {
     }
 
     private function renderHoneypotAndTimeTrap(): string {
-        return '<input type="text" name="_pfe_hp" value="" autocomplete="off" aria-hidden="true" tabindex="-1" style="position:absolute;left:-9999px;width:1px;height:1px;">'
+        return '<div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">'
+            . '<label>Si eres humano, deja este campo vacío:</label>'
+            . '<input type="url" name="_pfe_url" value="" autocomplete="off" tabindex="-1">'
+            . '</div>'
             . '<input type="hidden" name="_pfe_ts" value="" data-pfe-ts="1">';
     }
 

@@ -55,15 +55,6 @@ class Installer {
                 'rate_limit'      => 5,
             ]);
         }
-        if (!get_option('pfe_pdf_newsletter')) {
-            update_option('pfe_pdf_newsletter', [
-                'enabled'     => false,
-                'label'       => 'Quiero recibir novedades por email',
-                'pre_checked' => false,
-                'required'    => false,
-                'position'    => 'before_submit',
-            ]);
-        }
         if (!get_option('pfe_newsletter')) {
             update_option('pfe_newsletter', [
                 'enabled'  => false,
@@ -73,11 +64,11 @@ class Installer {
                 'timeout'  => 10,
             ]);
         }
-        if (!get_option('pfe_forms')) {
+        if (get_option('pfe_forms') === false) {
             update_option('pfe_forms', []);
         }
-        if (!get_option('pfe_pdf_templates')) {
-            update_option('pfe_pdf_templates', $this->defaultPdfTemplates());
+        if (get_option('pfe_pdf_templates') === false) {
+            update_option('pfe_pdf_templates', []);
         }
         if (!get_option('pfe_branding')) {
             update_option('pfe_branding', [
@@ -87,22 +78,6 @@ class Installer {
         }
     }
 
-    /**
-     * Default PDF template mappings — PAGE_SLUG_TEMPLATE / legacy mode.
-     *
-     * Resolution: the last path segment of pageUrl (the page slug) is matched
-     * against slug_contains. First match wins.
-     *
-     * Origin legend:
-     *   [legacy]  — mapping existed in Tota-form-detecterv2/enviar-enlace-email.php
-     *   [new]     — mapping added during migration (no legacy equivalent)
-     *
-     * All legacy templates may contain hardcoded PDF links and RO-DES branding.
-     * They are NOT multisite-friendly in their current form.
-     *
-     * NOTE: baja-de-un-vehiculo-robado was present in legacy templates/ but had
-     * no mapping in the legacy PHP; the mapping here is a migration decision [new].
-     */
     /**
      * Imports .html files from /templates/ into pfe_pdf_email_templates option.
      * Enriches existing page-slug mappings with template_slug derived from template_file.
@@ -118,18 +93,17 @@ class Installer {
             return;
         }
 
-        // Import all .html files from /templates/
-        $templDir  = PFE_DIR . 'templates/';
-        $htmlFiles = glob($templDir . '*.html') ?: [];
-        $templates = [];
-        foreach ($htmlFiles as $file) {
-            $slug        = basename($file, '.html');
-            $name        = ucfirst(str_replace('-', ' ', $slug));
+        // Import only the neutral boilerplate — legacy RO-DES templates stay out of new installs.
+        // Existing installs that already ran the old migration keep their data untouched
+        // thanks to the idempotency guard at the top of this method.
+        $boilerplatePath = PFE_DIR . 'templates/_boilerplate.html';
+        $templates       = [];
+        if (file_exists($boilerplatePath)) {
             $templates[] = [
-                'slug'      => $slug,
-                'name'      => $name,
-                'subject'   => 'Tu guía: ' . $name,
-                'html_body' => (string) file_get_contents($file),
+                'slug'      => 'boilerplate',
+                'name'      => 'Plantilla base',
+                'subject'   => 'Tu guía',
+                'html_body' => (string) file_get_contents($boilerplatePath),
             ];
         }
         update_option('pfe_pdf_email_templates', $templates);
@@ -152,36 +126,9 @@ class Installer {
         if (get_option('pfe_pdf_file_mappings') === false) {
             update_option('pfe_pdf_file_mappings', []);
         }
+
+        // Remove legacy option no longer used by the plugin.
+        delete_option('pfe_pdf_newsletter');
     }
 
-    private function defaultPdfTemplates(): array {
-        return [
-            // [legacy]
-            ['slug_contains' => 'altas-y-rehabilitaciones-de-vehiculos',            'template_file' => 'alta-y-rehabilitacion.html'],
-            // [legacy]
-            ['slug_contains' => 'certificado-de-destruccion',                       'template_file' => 'certificado-de-destruccion.html'],
-            // [legacy]
-            ['slug_contains' => 'impuesto-de-circulacion',                          'template_file' => 'impuesto-de-circulacion.html'],
-            // [legacy]
-            ['slug_contains' => 'baja-de-vehiculos-por-exportacion',                'template_file' => 'baja-por-exportacion.html'],
-            // [legacy]
-            ['slug_contains' => 'cambio-de-titularidad-de-un-vehiculo',             'template_file' => 'cambio-de-titularidad.html'],
-            // [legacy]
-            ['slug_contains' => 'cambio-de-domicilio',                              'template_file' => 'cambio-domicilio.html'],
-            // [legacy]
-            ['slug_contains' => 'baja-temporal-de-vehiculos',                       'template_file' => 'baja-temporal.html'],
-            // [legacy]
-            ['slug_contains' => 'multas-trafico',                                   'template_file' => 'multas-de-trafico.html'],
-            // [legacy] — slug: notificaciones-de-sanciones-por-sms-o-email-dev
-            ['slug_contains' => 'notificaciones-de-sanciones-por-sms-o-email-dev', 'template_file' => 'dev.html'],
-            // [legacy]
-            ['slug_contains' => 'duplicados-y-renovaciones',                        'template_file' => 'duplicados-y-renovaciones.html'],
-            // [legacy]
-            ['slug_contains' => 'informes-de-vehiculos-en-trafico',                 'template_file' => 'informe-vehiculos.html'],
-            // [legacy] — slug: tresta-consultar-multas-de-trafico-en-internet
-            ['slug_contains' => 'tresta-consultar-multas-de-trafico-en-internet',   'template_file' => 'testra.html'],
-            // [new] — template existed in legacy but had no mapping in the PHP
-            ['slug_contains' => 'baja-de-un-vehiculo-robado',                       'template_file' => 'baja-de-un-vehiculo-robado.html'],
-        ];
-    }
 }

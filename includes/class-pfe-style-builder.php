@@ -12,33 +12,73 @@ class StyleBuilder {
             return '';
         }
 
-        $primaryColor = sanitize_hex_color($form['style_primary_color'] ?? '') ?? '';
-        $btnTextColor = sanitize_hex_color($form['style_button_text_color'] ?? '') ?? '';
-        $cardBgColor  = sanitize_hex_color($form['style_card_bg_color'] ?? '') ?? '';
-        $opacity      = self::sanitizeOpacity((string) ($form['style_overlay_opacity'] ?? ''));
-        $customCss    = wp_strip_all_tags((string) ($form['style_custom_css'] ?? ''));
+        $primaryColor     = sanitize_hex_color($form['style_primary_color']       ?? '') ?? '';
+        $btnTextColor     = sanitize_hex_color($form['style_button_text_color']    ?? '') ?? '';
+        $cardBgColor      = sanitize_hex_color($form['style_card_bg_color']        ?? '') ?? '';
+        $opacity          = self::sanitizeOpacity((string) ($form['style_overlay_opacity'] ?? ''));
+        $textColor        = sanitize_hex_color($form['style_text_color']           ?? '') ?? '';
+        $inputBgColor     = sanitize_hex_color($form['style_input_bg_color']       ?? '') ?? '';
+        $inputBorderColor = sanitize_hex_color($form['style_input_border_color']   ?? '') ?? '';
+        $inputTextColor   = sanitize_hex_color($form['style_input_text_color']     ?? '') ?? '';
+        $cardRadius       = self::sanitizeRadius((string) ($form['style_card_radius']  ?? ''), 30);
+        $inputRadius      = self::sanitizeRadius((string) ($form['style_input_radius'] ?? ''), 50);
+        $titleSizeRaw     = (string) ($form['style_title_size'] ?? '');
+        $titleSize        = in_array($titleSizeRaw, ['small', 'medium', 'large'], true) ? $titleSizeRaw : '';
+        $customCss        = wp_strip_all_tags((string) ($form['style_custom_css'] ?? ''));
 
-        if ($primaryColor === '' && $btnTextColor === '' && $cardBgColor === '' && $opacity === '' && trim($customCss) === '') {
+        if ($primaryColor === '' && $btnTextColor === '' && $cardBgColor === '' && $opacity === ''
+            && $textColor === '' && $inputBgColor === '' && $inputBorderColor === '' && $inputTextColor === ''
+            && $cardRadius === '' && $inputRadius === '' && $titleSize === '' && trim($customCss) === '') {
             return '';
         }
 
         $scope = '.pfe-overlay[data-pfe-form="' . esc_attr($slug) . '"]';
         $css   = '';
 
+        // Overlay scope vars (primary color CSS var + background opacity)
         $varLines = [];
         if ($primaryColor !== '') $varLines[] = "\t--pfe-green: {$primaryColor};";
         if ($opacity !== '')      $varLines[] = "\tbackground: rgba(0,0,0,{$opacity});";
-
         if ($varLines) {
             $css .= $scope . " {\n" . implode("\n", $varLines) . "\n}\n";
         }
 
-        if ($cardBgColor !== '') {
-            $css .= $scope . " .pfe-card {\n\tbackground: {$cardBgColor};\n}\n";
+        // Card block
+        $cardLines = [];
+        if ($cardBgColor !== '') $cardLines[] = "\tbackground: {$cardBgColor};";
+        if ($cardRadius  !== '') $cardLines[] = "\tborder-radius: {$cardRadius}px;";
+        if ($textColor   !== '') $cardLines[] = "\tcolor: {$textColor};";
+        if ($cardLines) {
+            $css .= $scope . " .pfe-card {\n" . implode("\n", $cardLines) . "\n}\n";
         }
 
-        if ($btnTextColor !== '') {
-            $css .= $scope . " .pfe-submit-btn {\n\tcolor: {$btnTextColor};\n}\n";
+        if ($textColor !== '') {
+            $css .= $scope . " h2,\n" . $scope . " label {\n\tcolor: {$textColor};\n}\n";
+        }
+
+        // Inputs block
+        $inputLines = [];
+        if ($inputBgColor     !== '') $inputLines[] = "\tbackground: {$inputBgColor};";
+        if ($inputBorderColor !== '') $inputLines[] = "\tborder-color: {$inputBorderColor};";
+        if ($inputTextColor   !== '') $inputLines[] = "\tcolor: {$inputTextColor};";
+        if ($inputRadius      !== '') $inputLines[] = "\tborder-radius: {$inputRadius}px;";
+        if ($inputLines) {
+            $css .= $scope . " .pfe-input,\n" . $scope . " textarea,\n" . $scope . " select {\n"
+                . implode("\n", $inputLines) . "\n}\n";
+        }
+
+        // Submit button block
+        $btnLines = [];
+        if ($btnTextColor !== '') $btnLines[] = "\tcolor: {$btnTextColor};";
+        if ($inputRadius  !== '') $btnLines[] = "\tborder-radius: {$inputRadius}px;";
+        if ($btnLines) {
+            $css .= $scope . " .pfe-submit-btn {\n" . implode("\n", $btnLines) . "\n}\n";
+        }
+
+        // Title size
+        if ($titleSize !== '') {
+            $sizeMap = ['small' => '1.1rem', 'medium' => '1.4rem', 'large' => '1.8rem'];
+            $css .= $scope . " h2 {\n\tfont-size: {$sizeMap[$titleSize]};\n}\n";
         }
 
         $scoped = self::scopeCustomCss(trim($customCss), $scope);
@@ -54,6 +94,13 @@ class StyleBuilder {
         $f = (float) $val;
         if ($f < 0.0 || $f > 1.0) return '';
         return number_format($f, 2);
+    }
+
+    private static function sanitizeRadius(string $val, int $max): string {
+        if ($val === '') return '';
+        $i = (int) $val;
+        if ($i <= 0 || $i > $max) return '';
+        return (string) $i;
     }
 
     /**

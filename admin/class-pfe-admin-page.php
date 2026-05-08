@@ -60,12 +60,19 @@ class PFE_AdminPage {
                                 'callback_enabled'          => !empty($pf['callback_enabled']),
                                 'callback_label'            => sanitize_text_field($pf['callback_label'] ?? ''),
                                 'callback_email_recipients' => sanitize_textarea_field($pf['callback_email_recipients'] ?? ''),
-                                'styles_enabled'            => !empty($pf['styles_enabled']),
-                                'style_primary_color'       => sanitize_hex_color($pf['style_primary_color'] ?? '') ?? '',
-                                'style_button_text_color'   => sanitize_hex_color($pf['style_button_text_color'] ?? '') ?? '',
-                                'style_card_bg_color'       => sanitize_hex_color($pf['style_card_bg_color'] ?? '') ?? '',
-                                'style_overlay_opacity'     => $this->sanitizeOpacity((string) ($pf['style_overlay_opacity'] ?? '')),
-                                'style_custom_css'          => (string) ($pf['style_custom_css'] ?? ''),
+                                'styles_enabled'              => !empty($pf['styles_enabled']),
+                                'style_primary_color'         => sanitize_hex_color($pf['style_primary_color'] ?? '') ?? '',
+                                'style_button_text_color'     => sanitize_hex_color($pf['style_button_text_color'] ?? '') ?? '',
+                                'style_card_bg_color'         => sanitize_hex_color($pf['style_card_bg_color'] ?? '') ?? '',
+                                'style_overlay_opacity'       => $this->sanitizeOpacity((string) ($pf['style_overlay_opacity'] ?? '')),
+                                'style_text_color'            => sanitize_hex_color($pf['style_text_color']         ?? '') ?? '',
+                                'style_input_bg_color'        => sanitize_hex_color($pf['style_input_bg_color']     ?? '') ?? '',
+                                'style_input_border_color'    => sanitize_hex_color($pf['style_input_border_color'] ?? '') ?? '',
+                                'style_input_text_color'      => sanitize_hex_color($pf['style_input_text_color']   ?? '') ?? '',
+                                'style_card_radius'           => $this->sanitizeRadius((string) ($pf['style_card_radius']  ?? ''), 30),
+                                'style_input_radius'          => $this->sanitizeRadius((string) ($pf['style_input_radius'] ?? ''), 50),
+                                'style_title_size'            => in_array($pf['style_title_size'] ?? '', ['', 'small', 'medium', 'large'], true) ? (string) ($pf['style_title_size'] ?? '') : '',
+                                'style_custom_css'            => (string) ($pf['style_custom_css'] ?? ''),
                                 'fields'                    => $pdfFields,
                             ];
                         }
@@ -145,10 +152,17 @@ class PFE_AdminPage {
                         'callback_label'             => sanitize_text_field($f['callback_label'] ?? ''),
                         'callback_email_recipients'  => sanitize_textarea_field($f['callback_email_recipients'] ?? ''),
                         'styles_enabled'             => !empty($f['styles_enabled']),
-                        'style_primary_color'        => sanitize_hex_color($f['style_primary_color'] ?? '') ?? '',
-                        'style_button_text_color'    => sanitize_hex_color($f['style_button_text_color'] ?? '') ?? '',
-                        'style_card_bg_color'        => sanitize_hex_color($f['style_card_bg_color'] ?? '') ?? '',
+                        'style_primary_color'        => sanitize_hex_color($f['style_primary_color']        ?? '') ?? '',
+                        'style_button_text_color'    => sanitize_hex_color($f['style_button_text_color']    ?? '') ?? '',
+                        'style_card_bg_color'        => sanitize_hex_color($f['style_card_bg_color']        ?? '') ?? '',
                         'style_overlay_opacity'      => $this->sanitizeOpacity((string) ($f['style_overlay_opacity'] ?? '')),
+                        'style_text_color'           => sanitize_hex_color($f['style_text_color']           ?? '') ?? '',
+                        'style_input_bg_color'       => sanitize_hex_color($f['style_input_bg_color']       ?? '') ?? '',
+                        'style_input_border_color'   => sanitize_hex_color($f['style_input_border_color']   ?? '') ?? '',
+                        'style_input_text_color'     => sanitize_hex_color($f['style_input_text_color']     ?? '') ?? '',
+                        'style_card_radius'          => $this->sanitizeRadius((string) ($f['style_card_radius']  ?? ''), 30),
+                        'style_input_radius'         => $this->sanitizeRadius((string) ($f['style_input_radius'] ?? ''), 50),
+                        'style_title_size'           => in_array($f['style_title_size'] ?? '', ['', 'small', 'medium', 'large'], true) ? (string) ($f['style_title_size'] ?? '') : '',
                         'style_custom_css'           => (string) ($f['style_custom_css'] ?? ''),
                     ];
                 }
@@ -174,12 +188,7 @@ class PFE_AdminPage {
                 ]);
                 break;
             case 'pdf-templates':
-                // ── 1. Newsletter PDF ──────────────────────────────────────────────────
-                $this->settings->savePdfNewsletter([
-                    'enabled' => !empty($_POST['pdf_newsletter_enabled']),
-                ]);
-
-                // ── 2. Mappings por page slug (existentes + campo template_slug nuevo) ──
+                // ── 1. Mappings por page slug (existentes + campo template_slug nuevo) ──
                 $rawMappings = is_array($_POST['pdf_mappings'] ?? null) ? $_POST['pdf_mappings'] : [];
                 $mappings    = [];
                 foreach ($rawMappings as $m) {
@@ -340,5 +349,12 @@ class PFE_AdminPage {
         $f = (float) $val;
         if ($f < 0.0 || $f > 1.0) return '';
         return number_format($f, 2);
+    }
+
+    private function sanitizeRadius(string $val, int $max): string {
+        if ($val === '') return '';
+        $i = (int) $val;
+        if ($i <= 0 || $i > $max) return '';
+        return (string) $i;
     }
 }

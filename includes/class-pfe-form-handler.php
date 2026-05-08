@@ -9,7 +9,7 @@ class FormHandler {
 
     /** Fields injected by the engine; never user data. */
     private const RESERVED = [
-        '_pfe_hp', '_pfe_ts', 'form_slug', 'pfe_newsletter_consent',
+        '_pfe_url', '_pfe_ts', 'form_slug', 'pfe_newsletter_consent',
         'pfe_callback_requested', 'pfe_callback_day', 'pfe_callback_time',
     ];
 

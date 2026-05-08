@@ -1,4 +1,74 @@
 /* popup-form-engine admin.js — master-detail forms builder */
+
+function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+    ta.setAttribute('readonly', '');
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) { /* silent */ }
+    document.body.removeChild(ta);
+}
+
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(function () { fallbackCopy(text); });
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function buildStylePreviewHtml(v, scope) {
+    var css = '';
+    var varLines = [];
+    if (v.style_primary_color)   varLines.push('\t--pfe-green: ' + v.style_primary_color + ';');
+    if (v.style_overlay_opacity) varLines.push('\tbackground: rgba(0,0,0,' + v.style_overlay_opacity + ');');
+    if (varLines.length) css += scope + ' {\n' + varLines.join('\n') + '\n}\n';
+    var cardLines = [];
+    if (v.style_card_bg_color) cardLines.push('\tbackground: ' + v.style_card_bg_color + ';');
+    if (v.style_card_radius && parseInt(v.style_card_radius, 10) > 0) cardLines.push('\tborder-radius: ' + v.style_card_radius + 'px;');
+    if (v.style_text_color)    cardLines.push('\tcolor: ' + v.style_text_color + ';');
+    if (cardLines.length) css += scope + ' .pfe-card {\n' + cardLines.join('\n') + '\n}\n';
+    if (v.style_text_color) css += scope + ' h2, ' + scope + ' label { color: ' + v.style_text_color + '; }\n';
+    var inputLines = [];
+    if (v.style_input_bg_color)     inputLines.push('\tbackground: ' + v.style_input_bg_color + ';');
+    if (v.style_input_border_color) inputLines.push('\tborder-color: ' + v.style_input_border_color + ';');
+    if (v.style_input_text_color)   inputLines.push('\tcolor: ' + v.style_input_text_color + ';');
+    if (v.style_input_radius && parseInt(v.style_input_radius, 10) > 0) inputLines.push('\tborder-radius: ' + v.style_input_radius + 'px;');
+    if (inputLines.length) css += scope + ' .pfe-input, ' + scope + ' textarea, ' + scope + ' select {\n' + inputLines.join('\n') + '\n}\n';
+    var btnLines = [];
+    if (v.style_button_text_color) btnLines.push('\tcolor: ' + v.style_button_text_color + ';');
+    if (v.style_input_radius && parseInt(v.style_input_radius, 10) > 0) btnLines.push('\tborder-radius: ' + v.style_input_radius + 'px;');
+    if (btnLines.length) css += scope + ' .pfe-submit-btn {\n' + btnLines.join('\n') + '\n}\n';
+    if (v.style_title_size) {
+        var szMap = { small: '1.1rem', medium: '1.4rem', large: '1.8rem' };
+        if (szMap[v.style_title_size]) css += scope + ' h2 { font-size: ' + szMap[v.style_title_size] + '; }\n';
+    }
+    var base = [
+        '* { box-sizing:border-box; margin:0; padding:0; }',
+        'body { background:#555; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }',
+        '.pfe-overlay { display:flex; align-items:center; justify-content:center; min-height:100vh; width:100%; padding:1rem; background:rgba(0,0,0,0.6); }',
+        '.pfe-card { background:#fff; border-radius:4px; padding:2rem; width:100%; max-width:440px; box-shadow:0 8px 32px rgba(0,0,0,.25); }',
+        '.pfe-card h2 { margin-bottom:1.25rem; font-size:1.25rem; color:#1e1e1e; }',
+        '.pfe-field-wrap { margin-bottom:.85rem; }',
+        '.pfe-field-wrap label { display:block; font-size:.875rem; font-weight:500; margin-bottom:.3rem; color:#333; }',
+        '.pfe-input { display:block; width:100%; padding:.5rem .75rem; border:1px solid #8c8f94; border-radius:3px; font-size:.875rem; background:#fff; color:#2c3338; }',
+        '.pfe-newsletter-consent label { display:flex; align-items:center; gap:.4rem; font-weight:400; }',
+        '.pfe-submit-btn { display:block; width:100%; margin-top:1rem; padding:.65rem 1.25rem; background:var(--pfe-green,#007a3d); color:#fff; border:none; border-radius:3px; font-size:1rem; cursor:pointer; font-weight:600; }',
+    ].join('\n');
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + base + '\n' + css + '</style></head><body>' +
+        '<div class="pfe-overlay" data-pfe-form="__preview__">' +
+        '<div class="pfe-card">' +
+        '<h2>Título de ejemplo</h2>' +
+        '<div class="pfe-field-wrap"><label>Nombre</label><input type="text" class="pfe-input" placeholder="Tu nombre"></div>' +
+        '<div class="pfe-field-wrap"><label>Email</label><input type="email" class="pfe-input" placeholder="tu@email.com"></div>' +
+        '<div class="pfe-field-wrap"><label>Teléfono</label><input type="tel" class="pfe-input" placeholder="+34 600 000 000"></div>' +
+        '<div class="pfe-field-wrap pfe-newsletter-consent"><label><input type="checkbox"> Quiero recibir novedades por email</label></div>' +
+        '<button type="button" class="pfe-submit-btn">Enviar</button>' +
+        '</div></div></body></html>';
+}
+
 (function () {
     'use strict';
 
@@ -114,6 +184,29 @@
         setField(block, 'style_overlay_opacity',   form.style_overlay_opacity   != null ? String(form.style_overlay_opacity) : '');
         setField(block, 'style_custom_css',        form.style_custom_css        || '');
 
+        // New color fields: checkbox-enable pattern (empty saved value = unchecked = no CSS injected)
+        (function () {
+            ['style_text_color', 'style_input_bg_color', 'style_input_border_color', 'style_input_text_color'].forEach(function (key) {
+                var val = form[key] || '';
+                setFieldChecked(block, key + '_on', val !== '');
+                if (val !== '') setField(block, key, val);
+                var cb = block.querySelector('[data-pfe-field="' + key + '_on"]');
+                var pk = block.querySelector('[data-pfe-field="' + key + '"]');
+                if (cb && pk) {
+                    pk.disabled = !cb.checked;
+                    cb.addEventListener('change', function () { pk.disabled = !this.checked; });
+                }
+            });
+        }());
+
+        // New range fields
+        setField(block, 'style_card_radius',  form.style_card_radius  || '0');
+        setField(block, 'style_input_radius', form.style_input_radius || '0');
+
+        // Title size select
+        var titleSizeEl = block.querySelector('[data-pfe-field="style_title_size"]');
+        if (titleSizeEl) titleSizeEl.value = form.style_title_size || '';
+
         // Styles toggle
         (function () {
             var stCb = block.querySelector('[data-pfe-field="styles_enabled"]');
@@ -131,6 +224,48 @@
             opOutput.textContent = opRange.value;
             opRange.addEventListener('input', function () { opOutput.textContent = this.value; });
         }());
+
+        // Card radius range: live output
+        (function () {
+            var r = block.querySelector('[data-pfe-field="style_card_radius"]');
+            var o = block.querySelector('.pfe-card-radius-output');
+            if (!r || !o) return;
+            o.textContent = r.value;
+            r.addEventListener('input', function () { o.textContent = this.value; });
+        }());
+
+        // Input radius range: live output
+        (function () {
+            var r = block.querySelector('[data-pfe-field="style_input_radius"]');
+            var o = block.querySelector('.pfe-input-radius-output');
+            if (!r || !o) return;
+            o.textContent = r.value;
+            r.addEventListener('input', function () { o.textContent = this.value; });
+        }());
+
+        // Style preview button
+        (function () {
+            var btn   = block.querySelector('.pfe-style-preview-btn');
+            var modal = block.querySelector('.pfe-style-preview-modal');
+            var close = block.querySelector('.pfe-style-preview-close');
+            var frame = block.querySelector('.pfe-style-preview-frame');
+            if (!btn || !modal || !frame) return;
+            btn.addEventListener('click', function () {
+                frame.srcdoc = buildStylePreviewHtml(collectEditData(), '.pfe-overlay[data-pfe-form="__preview__"]');
+                modal.style.display = 'flex';
+            });
+            if (close) close.addEventListener('click', function () { modal.style.display = 'none'; frame.srcdoc = ''; });
+        }());
+
+        // CSS class reference: copy selector to clipboard on click
+        block.querySelectorAll('.pfe-css-class-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                copyToClipboard(btn.dataset.css || btn.textContent.trim());
+                var orig = btn.textContent;
+                btn.textContent = '¡Copiado!';
+                setTimeout(function () { btn.textContent = orig; }, 800);
+            });
+        });
 
         // Newsletter section: show/hide details based on enabled state
         (function () {
@@ -233,6 +368,13 @@
             style_card_bg_color:        getField(block, 'style_card_bg_color'),
             style_overlay_opacity:      getField(block, 'style_overlay_opacity'),
             style_custom_css:           getField(block, 'style_custom_css'),
+            style_text_color:         getFieldChecked(block, 'style_text_color_on')         ? getField(block, 'style_text_color')         : '',
+            style_input_bg_color:     getFieldChecked(block, 'style_input_bg_color_on')     ? getField(block, 'style_input_bg_color')     : '',
+            style_input_border_color: getFieldChecked(block, 'style_input_border_color_on') ? getField(block, 'style_input_border_color') : '',
+            style_input_text_color:   getFieldChecked(block, 'style_input_text_color_on')   ? getField(block, 'style_input_text_color')   : '',
+            style_card_radius:        getField(block, 'style_card_radius'),
+            style_input_radius:       getField(block, 'style_input_radius'),
+            style_title_size:         getField(block, 'style_title_size'),
             fields,
         };
     }
@@ -563,6 +705,29 @@
         setPdfField(block, 'style_overlay_opacity',   form.style_overlay_opacity   != null ? String(form.style_overlay_opacity) : '');
         setPdfField(block, 'style_custom_css',        form.style_custom_css        || '');
 
+        // New color fields (PDF): checkbox-enable pattern
+        (function () {
+            ['style_text_color', 'style_input_bg_color', 'style_input_border_color', 'style_input_text_color'].forEach(function (key) {
+                var val = form[key] || '';
+                setPdfFieldChecked(block, key + '_on', val !== '');
+                if (val !== '') setPdfField(block, key, val);
+                var cb = block.querySelector('[data-pfe-pdf-field="' + key + '_on"]');
+                var pk = block.querySelector('[data-pfe-pdf-field="' + key + '"]');
+                if (cb && pk) {
+                    pk.disabled = !cb.checked;
+                    cb.addEventListener('change', function () { pk.disabled = !this.checked; });
+                }
+            });
+        }());
+
+        // New range fields (PDF)
+        setPdfField(block, 'style_card_radius',  form.style_card_radius  || '0');
+        setPdfField(block, 'style_input_radius', form.style_input_radius || '0');
+
+        // Title size select (PDF)
+        var pdfTitleSizeEl = block.querySelector('[data-pfe-pdf-field="style_title_size"]');
+        if (pdfTitleSizeEl) pdfTitleSizeEl.value = form.style_title_size || '';
+
         // Styles toggle
         (function () {
             var stCb = block.querySelector('[data-pfe-pdf-field="styles_enabled"]');
@@ -580,6 +745,48 @@
             opOutput.textContent = opRange.value;
             opRange.addEventListener('input', function () { opOutput.textContent = this.value; });
         }());
+
+        // Card radius range: live output (PDF)
+        (function () {
+            var r = block.querySelector('[data-pfe-pdf-field="style_card_radius"]');
+            var o = block.querySelector('.pfe-card-radius-output');
+            if (!r || !o) return;
+            o.textContent = r.value;
+            r.addEventListener('input', function () { o.textContent = this.value; });
+        }());
+
+        // Input radius range: live output (PDF)
+        (function () {
+            var r = block.querySelector('[data-pfe-pdf-field="style_input_radius"]');
+            var o = block.querySelector('.pfe-input-radius-output');
+            if (!r || !o) return;
+            o.textContent = r.value;
+            r.addEventListener('input', function () { o.textContent = this.value; });
+        }());
+
+        // Style preview button (PDF)
+        (function () {
+            var btn   = block.querySelector('.pfe-style-preview-btn');
+            var modal = block.querySelector('.pfe-style-preview-modal');
+            var close = block.querySelector('.pfe-style-preview-close');
+            var frame = block.querySelector('.pfe-style-preview-frame');
+            if (!btn || !modal || !frame) return;
+            btn.addEventListener('click', function () {
+                frame.srcdoc = buildStylePreviewHtml(collectPdfEditData(), '.pfe-overlay[data-pfe-form="__preview__"]');
+                modal.style.display = 'flex';
+            });
+            if (close) close.addEventListener('click', function () { modal.style.display = 'none'; frame.srcdoc = ''; });
+        }());
+
+        // CSS class reference: copy selector to clipboard on click (PDF)
+        block.querySelectorAll('.pfe-css-class-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                copyToClipboard(btn.dataset.css || btn.textContent.trim());
+                var orig = btn.textContent;
+                btn.textContent = '¡Copiado!';
+                setTimeout(function () { btn.textContent = orig; }, 800);
+            });
+        });
 
         // Fields list
         const fieldsList = block.querySelector('.pfe-pdf-fields-list');
@@ -657,6 +864,13 @@
             style_card_bg_color:        getPdfField(block, 'style_card_bg_color'),
             style_overlay_opacity:      getPdfField(block, 'style_overlay_opacity'),
             style_custom_css:           getPdfField(block, 'style_custom_css'),
+            style_text_color:         getPdfFieldChecked(block, 'style_text_color_on')         ? getPdfField(block, 'style_text_color')         : '',
+            style_input_bg_color:     getPdfFieldChecked(block, 'style_input_bg_color_on')     ? getPdfField(block, 'style_input_bg_color')     : '',
+            style_input_border_color: getPdfFieldChecked(block, 'style_input_border_color_on') ? getPdfField(block, 'style_input_border_color') : '',
+            style_input_text_color:   getPdfFieldChecked(block, 'style_input_text_color_on')   ? getPdfField(block, 'style_input_text_color')   : '',
+            style_card_radius:        getPdfField(block, 'style_card_radius'),
+            style_input_radius:       getPdfField(block, 'style_input_radius'),
+            style_title_size:         getPdfField(block, 'style_title_size'),
             fields,
         };
     }
@@ -860,27 +1074,6 @@
     var templatesArray  = Array.isArray(pfeAdmin?.pdfEmailTemplatesData) ? [...pfeAdmin.pdfEmailTemplatesData] : [];
     var tplEditingIdx   = -1;
     var tplOrigSnapshot = null;
-
-    // ── Clipboard helpers ────────────────────────────────────────────────────
-
-    function fallbackCopy(text) {
-        var ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
-        ta.setAttribute('readonly', '');
-        document.body.appendChild(ta);
-        ta.select();
-        try { document.execCommand('copy'); } catch (e) { /* silent */ }
-        document.body.removeChild(ta);
-    }
-
-    function copyToClipboard(text) {
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(text).catch(function () { fallbackCopy(text); });
-        } else {
-            fallbackCopy(text);
-        }
-    }
 
     // ── Edit view ────────────────────────────────────────────────────────────
 
