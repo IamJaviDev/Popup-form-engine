@@ -1196,6 +1196,60 @@ function buildStylePreviewHtml(v, scope) {
             });
         }
 
+        // "Enviar prueba" button
+        var testEmailInput = block.querySelector('.pfe-template-test-email');
+        var testSendBtn    = block.querySelector('.pfe-template-test-send-btn');
+        var testStatusEl   = block.querySelector('.pfe-template-test-status');
+
+        if (testSendBtn && testEmailInput && testStatusEl) {
+            testSendBtn.addEventListener('click', function () {
+                var recipient = (testEmailInput.value || '').trim();
+                if (!recipient) {
+                    testStatusEl.textContent = '⚠️ Indica un email destinatario.';
+                    testStatusEl.style.color = '#b00';
+                    return;
+                }
+
+                testSendBtn.disabled = true;
+                testStatusEl.textContent = '⏳ Enviando…';
+                testStatusEl.style.color = '#646970';
+
+                var ajaxUrl = (typeof pfeTemplateTest !== 'undefined') ? pfeTemplateTest.ajaxUrl : (window.ajaxurl || '');
+                var nonce   = (typeof pfeTemplateTest !== 'undefined') ? pfeTemplateTest.nonce  : '';
+
+                var body = new URLSearchParams({
+                    action:    'pfe_template_test_send',
+                    nonce:     nonce,
+                    recipient: recipient,
+                    subject:   tplGetField(block, 'subject'),
+                    html_body: tplGetField(block, 'html_body'),
+                });
+
+                fetch(ajaxUrl, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body:    body.toString(),
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        testStatusEl.textContent = '✅ ' + (data.data.message || 'Enviado.');
+                        testStatusEl.style.color = '#46b450';
+                    } else {
+                        testStatusEl.textContent = '❌ ' + ((data.data && data.data.message) || 'Error al enviar.');
+                        testStatusEl.style.color = '#b00';
+                    }
+                })
+                .catch(function () {
+                    testStatusEl.textContent = '❌ Error de red.';
+                    testStatusEl.style.color = '#b00';
+                })
+                .finally(function () {
+                    setTimeout(function () { testSendBtn.disabled = false; }, 3000);
+                });
+            });
+        }
+
         tplOrigSnapshot = JSON.stringify(collectTplEditData());
 
         tplListView.style.display = 'none';

@@ -32,6 +32,7 @@ class NewsletterClient {
             'guia'          => false,
             'source_domain' => (string) parse_url(home_url(), PHP_URL_HOST),
             '_test'         => true,
+            'cf'            => true,
         ];
 
         $start    = microtime(true);

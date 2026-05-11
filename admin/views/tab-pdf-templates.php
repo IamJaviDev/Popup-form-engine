@@ -129,6 +129,16 @@ foreach ($emailTemplates as $et) {
                                 <?php esc_html_e('Vista previa', 'popup-form-engine'); ?>
                             </button>
                         </p>
+                        <p style="margin-top:.4rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+                            <input type="email" class="pfe-template-test-email regular-text"
+                                   placeholder="<?php esc_attr_e('email@destino.com', 'popup-form-engine'); ?>"
+                                   value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>"
+                                   style="width:240px;">
+                            <button type="button" class="button pfe-template-test-send-btn">
+                                <?php esc_html_e('Enviar prueba', 'popup-form-engine'); ?>
+                            </button>
+                            <span class="pfe-template-test-status" style="font-size:.9rem;"></span>
+                        </p>
                     </td>
                 </tr>
             </table>

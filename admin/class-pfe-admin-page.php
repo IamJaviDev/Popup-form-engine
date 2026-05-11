@@ -19,9 +19,10 @@ class PFE_AdminPage {
         switch ($tab) {
             case 'general':
                 $this->settings->saveGeneral([
-                    'from_email' => sanitize_email($_POST['from_email'] ?? ''),
-                    'from_name'  => sanitize_text_field($_POST['from_name'] ?? ''),
-                    'rate_limit' => (int) ($_POST['rate_limit'] ?? 5),
+                    'from_email'               => sanitize_email($_POST['from_email'] ?? ''),
+                    'from_name'                => sanitize_text_field($_POST['from_name'] ?? ''),
+                    'rate_limit'               => (int) ($_POST['rate_limit'] ?? 5),
+                    'delete_data_on_uninstall' => !empty($_POST['delete_data_on_uninstall']),
                 ]);
                 break;
             case 'forms':
@@ -299,17 +300,21 @@ class PFE_AdminPage {
                     </a>
                 <?php endforeach; ?>
             </nav>
+            <?php if ($activeTab !== 'logs'): ?>
             <form method="post" action="" id="pfe-settings-form">
                 <?php wp_nonce_field('pfe_settings_save', 'pfe_nonce'); ?>
                 <input type="hidden" name="pfe_save" value="1">
                 <input type="hidden" name="pfe_tab" value="<?php echo esc_attr($activeTab); ?>">
+            <?php endif; ?>
                 <?php $this->renderTab($activeTab); ?>
-                <?php if ($activeTab !== 'forms'): ?>
+                <?php if ($activeTab !== 'logs' && $activeTab !== 'forms'): ?>
                     <p class="submit">
                         <button type="submit" class="button button-primary"><?php esc_html_e('Guardar cambios', 'popup-form-engine'); ?></button>
                     </p>
                 <?php endif; ?>
+            <?php if ($activeTab !== 'logs'): ?>
             </form>
+            <?php endif; ?>
         </div>
         <?php
     }
@@ -350,6 +355,10 @@ class PFE_AdminPage {
             'templateBoilerplate'   => file_exists($boilerplatePath) ? (string) file_get_contents($boilerplatePath) : '',
             'restUrl'               => esc_url_raw(rest_url('popup-form-engine/v1')),
             'nonce'                 => wp_create_nonce('pfe_rest_action'),
+        ]);
+        wp_localize_script('pfe-admin', 'pfeTemplateTest', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce('pfe_template_test'),
         ]);
     }
 

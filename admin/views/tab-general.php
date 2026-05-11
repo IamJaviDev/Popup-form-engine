@@ -24,3 +24,25 @@ $general = $this->settings->getGeneral();
         </td>
     </tr>
 </table>
+
+<hr style="margin:2rem 0;">
+<h3><?php esc_html_e('Avanzado', 'popup-form-engine'); ?></h3>
+<table class="form-table" role="presentation">
+    <tr>
+        <th scope="row"><?php esc_html_e('Borrar datos al desinstalar', 'popup-form-engine'); ?></th>
+        <td>
+            <label>
+                <input type="checkbox" name="delete_data_on_uninstall" value="1"
+                       <?php checked(!empty($general['delete_data_on_uninstall'])); ?>>
+                <?php esc_html_e('Borrar todos los datos del plugin al desinstalar', 'popup-form-engine'); ?>
+            </label>
+            <p class="description" style="color:#b00;margin-top:.5rem;">
+                <strong><?php esc_html_e('⚠️ Atención:', 'popup-form-engine'); ?></strong>
+                <?php esc_html_e('Si activas esta opción, al desinstalar el plugin se eliminarán PERMANENTEMENTE todos los formularios, plantillas, mappings, branding, logs y configuración. Esta acción no se puede deshacer.', 'popup-form-engine'); ?>
+            </p>
+            <p class="description">
+                <?php esc_html_e('Por defecto está desactivada. Los datos se conservan al desinstalar para no perderlos accidentalmente y poder reactivar el plugin sin perder configuración.', 'popup-form-engine'); ?>
+            </p>
+        </td>
+    </tr>
+</table>

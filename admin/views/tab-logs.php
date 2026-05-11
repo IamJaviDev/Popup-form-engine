@@ -307,41 +307,51 @@ $to   = min($page * $perPage, $total);
 
 <hr style="margin-top:2rem;">
 
-<!-- ── Maintenance section (inside WP main form, saved via handleSave 'logs') -->
-<h3><?php esc_html_e('Mantenimiento de logs', 'popup-form-engine'); ?></h3>
-<table class="form-table">
-    <tr>
-        <th scope="row"><?php esc_html_e('Limpieza automática', 'popup-form-engine'); ?></th>
-        <td>
-            <label>
-                <input type="checkbox" name="logs_cleanup_enabled" value="1"
-                       <?php checked(!empty($retention['enabled'])); ?>>
-                <?php esc_html_e('Activar limpieza automática diaria', 'popup-form-engine'); ?>
-            </label>
-        </td>
-    </tr>
-    <tr>
-        <th scope="row"><?php esc_html_e('Borrar logs con más de', 'popup-form-engine'); ?></th>
-        <td>
-            <input type="number" name="logs_cleanup_days"
-                   value="<?php echo esc_attr((string) $retention['days']); ?>"
-                   id="pfe-cleanup-days" min="1" max="365" class="small-text">
-            <?php esc_html_e('días', 'popup-form-engine'); ?>
-            <p class="description">
-                <?php esc_html_e('Recomendado: 90 días. Solo se aplica si la limpieza automática está activada.', 'popup-form-engine'); ?>
-            </p>
-        </td>
-    </tr>
-    <tr>
-        <th scope="row"><?php esc_html_e('Limpieza manual', 'popup-form-engine'); ?></th>
-        <td>
-            <button type="button" class="button pfe-logs-purge-btn">
-                <?php esc_html_e('Borrar logs antiguos ahora', 'popup-form-engine'); ?>
-            </button>
-            <span class="pfe-logs-purge-status" style="margin-left:.5rem;"></span>
-            <p class="description">
-                <?php esc_html_e('Borra todos los logs con más antigüedad que el valor configurado arriba.', 'popup-form-engine'); ?>
-            </p>
-        </td>
-    </tr>
-</table>
+<!-- ── Maintenance section (standalone POST form) ────────────────────────── -->
+<form method="post" action="">
+    <?php wp_nonce_field('pfe_settings_save', 'pfe_nonce'); ?>
+    <input type="hidden" name="pfe_save" value="1">
+    <input type="hidden" name="pfe_tab"  value="logs">
+    <h3><?php esc_html_e('Mantenimiento de logs', 'popup-form-engine'); ?></h3>
+    <table class="form-table">
+        <tr>
+            <th scope="row"><?php esc_html_e('Limpieza automática', 'popup-form-engine'); ?></th>
+            <td>
+                <label>
+                    <input type="checkbox" name="logs_cleanup_enabled" value="1"
+                           <?php checked(!empty($retention['enabled'])); ?>>
+                    <?php esc_html_e('Activar limpieza automática diaria', 'popup-form-engine'); ?>
+                </label>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><?php esc_html_e('Borrar logs con más de', 'popup-form-engine'); ?></th>
+            <td>
+                <input type="number" name="logs_cleanup_days"
+                       value="<?php echo esc_attr((string) $retention['days']); ?>"
+                       id="pfe-cleanup-days" min="1" max="365" class="small-text">
+                <?php esc_html_e('días', 'popup-form-engine'); ?>
+                <p class="description">
+                    <?php esc_html_e('Recomendado: 90 días. Solo se aplica si la limpieza automática está activada.', 'popup-form-engine'); ?>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><?php esc_html_e('Limpieza manual', 'popup-form-engine'); ?></th>
+            <td>
+                <button type="button" class="button pfe-logs-purge-btn">
+                    <?php esc_html_e('Borrar logs antiguos ahora', 'popup-form-engine'); ?>
+                </button>
+                <span class="pfe-logs-purge-status" style="margin-left:.5rem;"></span>
+                <p class="description">
+                    <?php esc_html_e('Borra todos los logs con más antigüedad que el valor configurado arriba.', 'popup-form-engine'); ?>
+                </p>
+            </td>
+        </tr>
+    </table>
+    <p class="submit">
+        <button type="submit" class="button button-primary">
+            <?php esc_html_e('Guardar configuración de mantenimiento', 'popup-form-engine'); ?>
+        </button>
+    </p>
+</form>

@@ -13,7 +13,8 @@ class PFE_Admin {
         add_action('admin_post_pfe_export_csv',    [$this, 'handleExportCsv']);
         add_action('admin_post_pfe_clean_logs',    [$this, 'handleCleanLogs']);
         add_action('wp_ajax_pfe_logs_purge',        [$this, 'handleLogsPurge']);
-        add_action('wp_ajax_pfe_newsletter_test',   [$this, 'handleNewsletterTest']);
+        add_action('wp_ajax_pfe_newsletter_test',    [$this, 'handleNewsletterTest']);
+        add_action('wp_ajax_pfe_template_test_send', [$this, 'handleTemplateTestSend']);
     }
 
     public function registerMenu(): void {
@@ -50,6 +51,113 @@ class PFE_Admin {
         ], fn($v) => $v !== '');
 
         (new \PopupFormEngine\Logger())->exportCsv($filters);
+    }
+
+    /**
+     * wp_ajax_pfe_template_test_send — renders a PDF email template with dummy data and sends it.
+     */
+    public function handleTemplateTestSend(): void {
+        check_ajax_referer('pfe_template_test', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'forbidden'], 403);
+        }
+
+        $recipient = sanitize_email(wp_unslash($_POST['recipient'] ?? ''));
+        if (empty($recipient) || !is_email($recipient)) {
+            wp_send_json_error(['message' => __('Email destinatario no válido.', 'popup-form-engine')]);
+        }
+
+        $subject  = sanitize_text_field(wp_unslash($_POST['subject']  ?? ''));
+        $htmlBody = (string) wp_unslash($_POST['html_body'] ?? '');
+
+        if (empty($htmlBody)) {
+            wp_send_json_error(['message' => __('El HTML del template está vacío.', 'popup-form-engine')]);
+        }
+        if (empty($subject)) {
+            $subject = __('Prueba de template (Popup Form Engine)', 'popup-form-engine');
+        }
+
+        $settings = new \PopupFormEngine\Settings();
+        $branding = $settings->getBranding();
+        $general  = $settings->getGeneral();
+
+        // Find a real PDF in uploads as sample, or fall back to a placeholder URL.
+        $uploadDir = wp_upload_dir();
+        $samplePdf = trailingslashit($uploadDir['baseurl']) . 'ejemplo.pdf';
+        $firstPdf  = glob(trailingslashit($uploadDir['basedir']) . '*.pdf');
+        if (!empty($firstPdf)) {
+            $samplePdf = trailingslashit($uploadDir['baseurl']) . basename($firstPdf[0]);
+        }
+
+        // Dummy values for common placeholders.
+        $defaults = [
+            'nombre'   => 'Juan Palomo',
+            'name'     => 'Juan Palomo',
+            'email'    => $recipient,
+            'telefono' => '+34 600 000 000',
+            'tel'      => '+34 600 000 000',
+            'phone'    => '+34 600 000 000',
+            'title'    => 'Guía de ejemplo',
+            'pdf'      => $samplePdf,
+        ];
+
+        // Branding placeholders (use configured values if available).
+        foreach (['empresa', 'logo', 'color_primario', 'color_secundario', 'web', 'telefono_empresa', 'email_empresa', 'aviso_legal'] as $bKey) {
+            $defaults[$bKey] = $branding[$bKey] ?? '';
+        }
+
+        $finalHtml    = $htmlBody;
+        $finalSubject = $subject;
+
+        // Replace known placeholders.
+        foreach ($defaults as $key => $value) {
+            $pattern      = '/\{\{\s*' . preg_quote($key, '/') . '\s*\}\}/';
+            $finalHtml    = preg_replace($pattern, (string) $value, $finalHtml);
+            $finalSubject = preg_replace($pattern, (string) $value, $finalSubject);
+        }
+
+        // Heuristic fill for any remaining unknown {{ placeholder }} in body.
+        $finalHtml = preg_replace_callback(
+            '/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/',
+            static function (array $m): string {
+                $name = strtolower($m[1]);
+                if (str_contains($name, 'email') || str_contains($name, 'mail')) return 'ejemplo@dominio.com';
+                if (str_contains($name, 'tel')   || str_contains($name, 'phone') || str_contains($name, 'movil')) return '+34 600 000 000';
+                if (str_contains($name, 'dni')   || str_contains($name, 'nif'))  return '12345678X';
+                if (str_contains($name, 'fecha') || str_contains($name, 'date')) return date_i18n(get_option('date_format'));
+                return '[Ejemplo]';
+            },
+            $finalHtml
+        );
+
+        // Clear unresolved placeholders from subject (mirrors PdfHandler behaviour).
+        $finalSubject = (string) preg_replace('/\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\}\}/', '', $finalSubject);
+
+        $fromEmail = sanitize_email($general['from_email'] ?? get_option('admin_email'));
+        $fromName  = sanitize_text_field($general['from_name'] ?? get_bloginfo('name'));
+
+        $ctFilter   = static function (): string { return 'text/html'; };
+        $fromFilter = static function () use ($fromEmail): string { return $fromEmail; };
+        $nameFilter = static function () use ($fromName):  string { return $fromName; };
+
+        add_filter('wp_mail_content_type', $ctFilter);
+        add_filter('wp_mail_from',         $fromFilter);
+        add_filter('wp_mail_from_name',    $nameFilter);
+
+        $sent = wp_mail($recipient, '[PRUEBA] ' . $finalSubject, $finalHtml, ['Content-Type: text/html; charset=UTF-8']);
+
+        remove_filter('wp_mail_content_type', $ctFilter);
+        remove_filter('wp_mail_from',         $fromFilter);
+        remove_filter('wp_mail_from_name',    $nameFilter);
+
+        if ($sent) {
+            wp_send_json_success([
+                'message'   => sprintf(__('Email de prueba enviado a %s', 'popup-form-engine'), $recipient),
+                'recipient' => $recipient,
+            ]);
+        } else {
+            wp_send_json_error(['message' => __('wp_mail() devolvió false. Revisa la configuración de envío del servidor.', 'popup-form-engine')]);
+        }
     }
 
     /**
