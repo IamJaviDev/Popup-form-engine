@@ -11,6 +11,7 @@ class FormHandler {
     private const RESERVED = [
         '_pfe_url', '_pfe_ts', 'form_slug', 'pfe_newsletter_consent',
         'pfe_callback_requested', 'pfe_callback_day', 'pfe_callback_time',
+        'pfe_info_type',
     ];
 
     public function __construct(
@@ -73,6 +74,46 @@ class FormHandler {
             return ['status' => 400, 'message' => __('Email no válido o ausente.', 'popup-form-engine')];
         }
 
+        // ── Email headers (shared by all outbound emails in this handler) ──────────
+
+        $general   = $this->settings->getGeneral();
+        $fromEmail = sanitize_email($general['from_email'] ?? get_option('admin_email'));
+        $fromName  = sanitize_text_field($general['from_name'] ?? get_bloginfo('name'));
+        $headers   = ['Content-Type: text/html; charset=UTF-8'];
+
+        // ── Info-type user email ────────────────────────────────────────────────────
+        // Sends a template email to the user based on the pfe_info_type discriminator
+        // passed by the trigger button. Non-blocking: flow continues on any failure.
+
+        $infoType       = sanitize_key($params['pfe_info_type'] ?? '');
+        $userEmailError = null;
+        if ($infoType !== '') {
+            $allTemplates = (array) get_option('pfe_pdf_email_templates', []);
+            $tpl = null;
+            foreach ($allTemplates as $t) {
+                if (isset($t['slug']) && $t['slug'] === $infoType) { $tpl = $t; break; }
+            }
+            if ($tpl === null) {
+                $userEmailError = 'template_not_found';
+            } else {
+                $tplSubject = sanitize_text_field($tpl['subject'] ?? '') ?: __('Información solicitada', 'popup-form-engine');
+                $tplBody    = (string) ($tpl['html_body'] ?? '');
+                $ctFilter   = function (): string { return 'text/html'; };
+                $fromFilter = fn() => $fromEmail;
+                $nameFilter = fn() => $fromName;
+                add_filter('wp_mail_content_type', $ctFilter);
+                add_filter('wp_mail_from',         $fromFilter);
+                add_filter('wp_mail_from_name',    $nameFilter);
+                $userMailSent = wp_mail($email, $tplSubject, $tplBody, $headers);
+                remove_filter('wp_mail_content_type', $ctFilter);
+                remove_filter('wp_mail_from',         $fromFilter);
+                remove_filter('wp_mail_from_name',    $nameFilter);
+                if (!$userMailSent) {
+                    $userEmailError = 'user_email_failed';
+                }
+            }
+        }
+
         // ── Callback ("Llámame") ────────────────────────────────────────────────────
 
         // Server-side guard: only process callback if the form has it enabled.
@@ -89,13 +130,6 @@ class FormHandler {
                 return ['status' => 400, 'message' => __('La hora de llamada es obligatoria.', 'popup-form-engine')];
             }
         }
-
-        // ── Email headers (used by callback email) ─────────────────────────────────
-
-        $general   = $this->settings->getGeneral();
-        $fromEmail = sanitize_email($general['from_email'] ?? get_option('admin_email'));
-        $fromName  = sanitize_text_field($general['from_name'] ?? get_bloginfo('name'));
-        $headers   = ['Content-Type: text/html; charset=UTF-8'];
 
         // ── Callback email ─────────────────────────────────────────────────────────
         // Independent from internal email: fires whenever callback was requested and
@@ -136,6 +170,9 @@ class FormHandler {
 
         // Build log payload — callback metadata uses _ prefix to separate from form fields.
         $logPayload = $data;
+        if ($infoType !== '') {
+            $logPayload['_info_type'] = $infoType;
+        }
         if ($callbackEnabled) {
             $logPayload['_callback_requested'] = $callbackRequested ? 'si' : 'no';
             if ($callbackRequested) {
@@ -145,9 +182,11 @@ class FormHandler {
             }
         }
 
-        $errorMessage = null;
+        $errorMessage = $userEmailError;
         if ($callbackRequested && !$callbackEmailSent) {
-            $errorMessage = 'callback_email_failed';
+            $errorMessage = $errorMessage !== null
+                ? $errorMessage . ', callback_email_failed'
+                : 'callback_email_failed';
         }
 
         $this->logger->insert([

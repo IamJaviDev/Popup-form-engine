@@ -408,7 +408,10 @@
             setLoading(btn, true);
 
             try {
-                const res  = await postJson(restUrl + 'submit-form', Object.fromEntries(new FormData(form)));
+                const fd       = new FormData(form);
+                const infoType = (trigger && trigger.dataset) ? (trigger.dataset.infoType || '') : '';
+                if (infoType) fd.append('pfe_info_type', infoType);
+                const res  = await postJson(restUrl + 'submit-form', Object.fromEntries(fd));
                 const data = await res.json();
                 showMsg(card, data.message || (res.ok ? config.successMessage : ''), res.ok ? 'success' : 'error');
                 if (res.ok) form.style.display = 'none';
@@ -502,7 +505,7 @@
         const formTrigger = e.target.closest('.form-popup-trigger');
         if (formTrigger) {
             e.preventDefault();
-            let slug = formTrigger.dataset.formSlug;
+            let slug = formTrigger.dataset.form || formTrigger.dataset.formSlug;
             if (!slug) {
                 const m = (formTrigger.getAttribute('href') || '').match(/^#pfe-form:(.+)$/);
                 if (m) slug = m[1];
