@@ -30,7 +30,7 @@ class NewsletterClient {
             'phone'         => '000000000',
             'consent'       => false,
             'guia'          => false,
-            'source_domain' => (string) parse_url(home_url(), PHP_URL_HOST),
+            'source_domain' => preg_replace('/^www\./i', '', (string) parse_url(home_url(), PHP_URL_HOST)),
             '_test'         => true,
             'cf'            => true,
         ];
@@ -75,7 +75,7 @@ class NewsletterClient {
             return ['sent' => false, 'response' => 'newsletter_disabled'];
         }
         $cfg      = $this->settings->getNewsletter();
-        $payload['source_domain'] = (string) parse_url(home_url(), PHP_URL_HOST);
+        $payload['source_domain'] = preg_replace('/^www\./i', '', (string) parse_url(home_url(), PHP_URL_HOST));
         $response = wp_remote_post($this->settings->getNewsletterEndpoint(), [
             'timeout'   => (int) ($cfg['timeout'] ?? 10),
             'headers'   => ['Content-Type' => 'application/json'],
